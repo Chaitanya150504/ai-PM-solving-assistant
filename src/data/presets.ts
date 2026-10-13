@@ -38,17 +38,17 @@ export const PRESET_SCENARIOS: PresetScenario[] = [
     },
   },
   {
-    id: 'fintech-kyc',
-    badge: 'Fintech',
-    title: 'KYC Verification Drop-off',
-    description: '38% of prospective mobile banking customers abandon during identity photo verification.',
+    id: 'ecommerce-cart-abandonment',
+    badge: 'B2C E-commerce',
+    title: 'Shopping Cart Abandonment',
+    description: 'Many users add products to their shopping carts but leave without completing their purchases.',
     input: {
-      problemStatement: 'Over 38% of new users abandon account creation at the government ID photo and selfie verification step.',
-      productCompany: 'Nova Digital Bank',
-      targetUsers: 'Young professionals and gig workers opening primary mobile banking accounts',
-      goal: 'Increase KYC completion rate from 62% to >80% without lowering fraud detection thresholds',
+      problemStatement: 'Many users add products to their shopping carts but leave without completing their purchases.',
+      productCompany: 'B2C E-commerce',
+      targetUsers: 'Online Shoppers',
+      goal: 'Identify the reasons for cart abandonment and improve checkout conversion.',
       additionalContext:
-        'Drop-offs peak on optical document scanning errors and lighting issues on budget Android smartphones. Average time on step is 4.5 minutes before drop-off.',
+        'Users frequently browse and add items to their shopping carts, but a high percentage drop off before completing payment and checkout.',
     },
   },
   {
