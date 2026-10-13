@@ -1,0 +1,7 @@
+{
+  "name": "AI Problem-Solving Assistant",
+  "description": "Structured product management decision-support tool to systematically analyze product problems, root causes, hypotheses, prioritized experiments, and action plans.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
