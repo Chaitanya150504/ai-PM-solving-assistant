@@ -90,10 +90,41 @@ export default function App() {
         body: JSON.stringify(submittedInput),
       });
 
-      const data = await response.json();
+      const contentType = response.headers.get('content-type') || '';
+      let data: any = null;
 
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Failed to analyze problem. Please try again.');
+      if (contentType.includes('application/json')) {
+        try {
+          data = await response.json();
+        } catch {
+          // fallback if response was not valid JSON
+        }
+      }
+
+      if (!response.ok || !data || !data.success) {
+        if (!response.ok) {
+          if (response.status === 404) {
+            throw new Error(
+              'API endpoint /api/analyze was not found (404). Please ensure the api/analyze.ts serverless function is deployed on Vercel.'
+            );
+          }
+          if (response.status === 500 && data?.error) {
+            throw new Error(data.error);
+          }
+        }
+
+        const rawText =
+          data?.error ||
+          (await response.text().catch(() => '')) ||
+          `Request failed with status ${response.status}`;
+        const cleanMsg =
+          typeof rawText === 'string' && (rawText.startsWith('<') || rawText.startsWith('The page'))
+            ? `Server error (${response.status}). Please check Vercel serverless function logs and verify that GEMINI_API_KEY is configured in Environment Variables.`
+            : typeof rawText === 'string'
+              ? rawText
+              : 'Failed to analyze problem. Please try again.';
+
+        throw new Error(cleanMsg);
       }
 
       setReport(data.report);
