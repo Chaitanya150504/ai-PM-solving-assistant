@@ -5,14 +5,20 @@
 
 import React, { useState, useEffect } from 'react';
 import { ProblemInput, AnalysisReport, SavedAnalysis } from './types';
-import { Header } from './components/Header';
+import { TopNav } from './components/TopNav';
 import { ProblemInputForm } from './components/ProblemInputForm';
 import { AnalysisLoading } from './components/AnalysisLoading';
 import { ReportView } from './components/ReportView';
-import { SavedReportsModal } from './components/SavedReportsModal';
-import { AlertCircle, RefreshCw, ArrowLeft } from 'lucide-react';
+import { HistoryDrawer } from './components/HistoryDrawer';
+import { HowItWorksModal } from './components/HowItWorksModal';
+import {
+  AlertCircle,
+  RefreshCw,
+  ArrowLeft,
+} from 'lucide-react';
 
-const STORAGE_KEY = 'ai_pm_problem_solving_history_v1';
+const STORAGE_KEY = 'product_diagnosis_studio_history_v1';
+const LEGACY_STORAGE_KEY = 'problem_lab_investigation_history_v1';
 
 export default function App() {
   const [inputData, setInputData] = useState<ProblemInput>({
@@ -28,11 +34,12 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [savedList, setSavedList] = useState<SavedAnalysis[]>([]);
   const [isHistoryOpen, setIsHistoryOpen] = useState<boolean>(false);
+  const [isHelpOpen, setIsHelpOpen] = useState<boolean>(false);
 
-  // Load history from localStorage
+  // Load history from localStorage (with legacy fallback)
   useEffect(() => {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      const stored = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed)) {
@@ -47,13 +54,19 @@ export default function App() {
   // Save analysis to history
   const saveToHistory = (input: ProblemInput, generatedReport: AnalysisReport) => {
     try {
+      const newId = `analysis-${Date.now()}`;
       const newEntry: SavedAnalysis = {
-        id: `analysis-${Date.now()}`,
+        id: newId,
         timestamp: Date.now(),
         input,
         report: generatedReport,
       };
-      const updated = [newEntry, ...savedList.slice(0, 19)]; // Keep up to 20
+      const updated = [
+        newEntry,
+        ...savedList
+          .filter((item) => item.input.problemStatement !== input.problemStatement)
+          .slice(0, 19),
+      ];
       setSavedList(updated);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
     } catch (e) {
@@ -105,7 +118,7 @@ export default function App() {
         if (!response.ok) {
           if (response.status === 404) {
             throw new Error(
-              'API endpoint /api/analyze was not found (404). Please ensure the api/analyze.ts serverless function is deployed on Vercel.'
+              'API endpoint /api/analyze was not found (404). If running on Vercel, verify that the api/analyze.ts serverless function is deployed.'
             );
           }
           if (response.status === 500 && data?.error) {
@@ -119,7 +132,7 @@ export default function App() {
           `Request failed with status ${response.status}`;
         const cleanMsg =
           typeof rawText === 'string' && (rawText.startsWith('<') || rawText.startsWith('The page'))
-            ? `Server error (${response.status}). Please check Vercel serverless function logs and verify that GEMINI_API_KEY is configured in Environment Variables.`
+            ? `Server error (${response.status}). Please check serverless function logs and verify that GEMINI_API_KEY is configured in Vercel Project Settings.`
             : typeof rawText === 'string'
               ? rawText
               : 'Failed to analyze problem. Please try again.';
@@ -147,43 +160,46 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/60 text-gray-900 flex flex-col font-sans">
-      <Header
-        onOpenHistory={() => setIsHistoryOpen(true)}
-        savedCount={savedList.length}
+    <div className="min-h-screen bg-[#FAF8F5] text-stone-900 flex flex-col font-sans antialiased selection:bg-[#C85A32]/20 selection:text-[#C85A32]">
+      {/* Slim Horizontal Top Navigation Bar */}
+      <TopNav
         onNewAnalysis={handleNewAnalysis}
-        hasReport={Boolean(report)}
+        onOpenHistory={() => setIsHistoryOpen(true)}
+        onOpenHowItWorks={() => setIsHelpOpen(true)}
+        savedCount={savedList.length}
+        hasReport={!!report}
       />
 
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-8">
-        {/* Error State */}
+      {/* Main Workspace Canvas */}
+      <main className="flex-1 w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        {/* Error Banner */}
         {error && (
-          <div className="mb-6 bg-rose-50 border border-rose-200 rounded-2xl p-5 shadow-xs">
+          <div className="mb-6 max-w-4xl mx-auto bg-rose-50 border border-rose-200 rounded-md p-4 text-xs">
             <div className="flex items-start gap-3">
-              <div className="p-2 bg-rose-100 text-rose-700 rounded-lg shrink-0">
-                <AlertCircle className="w-5 h-5" />
+              <div className="p-1 bg-rose-100 text-rose-800 rounded shrink-0 mt-0.5">
+                <AlertCircle className="w-4 h-4" />
               </div>
               <div className="flex-1">
-                <h4 className="text-sm font-bold text-rose-900 mb-1">
-                  Problem Analysis Failed
+                <h4 className="font-semibold text-rose-950 mb-0.5">
+                  Investigation Diagnostic Failed
                 </h4>
-                <p className="text-xs text-rose-700 leading-relaxed mb-3">
+                <p className="text-rose-800 leading-relaxed mb-3">
                   {error}
                 </p>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleAnalyze(inputData)}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-lg transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 font-semibold text-white bg-[#C85A32] hover:bg-[#B34E29] rounded-md transition-colors cursor-pointer shadow-2xs"
                   >
                     <RefreshCw className="w-3.5 h-3.5" />
                     <span>Retry Analysis</span>
                   </button>
                   <button
                     onClick={() => setError(null)}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 rounded-lg transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 font-medium text-stone-700 bg-white hover:bg-stone-100 rounded-md transition-colors cursor-pointer border border-stone-200"
                   >
                     <ArrowLeft className="w-3.5 h-3.5" />
-                    <span>Back to Edit Input</span>
+                    <span>Return to Form</span>
                   </button>
                 </div>
               </div>
@@ -194,7 +210,7 @@ export default function App() {
         {/* Loading State */}
         {isLoading && <AnalysisLoading />}
 
-        {/* Input Form State */}
+        {/* Workspace Input State */}
         {!isLoading && !report && (
           <ProblemInputForm
             initialInput={inputData}
@@ -203,43 +219,43 @@ export default function App() {
           />
         )}
 
-        {/* Report View State */}
+        {/* Analysis Results Experience */}
         {!isLoading && report && (
           <ReportView
             input={inputData}
             report={report}
-            onNewAnalysis={handleNewAnalysis}
+            onNewInvestigation={handleNewAnalysis}
           />
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-gray-200 bg-white py-6 mt-auto">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-500">
-          <div>
-            <span className="font-semibold text-gray-700">AI Problem-Solving Assistant</span>
-            {' — '}
-            Product Management decision-support engine.
+      {/* Minimal Footer */}
+      <footer className="border-t border-stone-200 bg-[#FAF8F5] py-4 px-4 sm:px-6 lg:px-8 text-xs text-stone-500">
+        <div className="max-w-[1400px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-stone-800">Product Diagnosis Studio</span>
+            <span className="text-stone-300">·</span>
+            <span>Product Strategy Workspace</span>
           </div>
-          <div className="flex items-center gap-4 text-gray-400">
-            <span>Root Causes</span>
-            <span>•</span>
-            <span>Hypotheses</span>
-            <span>•</span>
-            <span>Prioritized Experiments</span>
-            <span>•</span>
-            <span>Guardrails</span>
+          <div className="text-stone-400 text-[11px] font-mono">
+            Diagnose → Hypothesize → Investigate → Experiment → Measure → Act
           </div>
         </div>
       </footer>
 
-      {/* History Modal */}
-      <SavedReportsModal
+      {/* History Drawer */}
+      <HistoryDrawer
         isOpen={isHistoryOpen}
         onClose={() => setIsHistoryOpen(false)}
         savedList={savedList}
         onSelect={handleSelectHistory}
         onDelete={handleDeleteHistory}
+      />
+
+      {/* How It Works Modal */}
+      <HowItWorksModal
+        isOpen={isHelpOpen}
+        onClose={() => setIsHelpOpen(false)}
       />
     </div>
   );

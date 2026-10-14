@@ -1,6 +1,6 @@
 import React from 'react';
 import { Experiment, ExperimentPrioritization, PrioritizedExperimentItem } from '../types';
-import { Award, Zap, Target, Clock, ShieldAlert, AlertCircle } from 'lucide-react';
+import { Zap, CheckCircle2 } from 'lucide-react';
 
 interface PrioritizationSectionProps {
   prioritization: ExperimentPrioritization;
@@ -11,7 +11,6 @@ export const PrioritizationSection: React.FC<PrioritizationSectionProps> = ({
   prioritization,
   experiments,
 }) => {
-  // Aggregate all prioritization items provided by the AI
   const rawProvidedItems: PrioritizedExperimentItem[] = [
     ...(prioritization.quickWins || []),
     ...(prioritization.strategicBets || []),
@@ -20,9 +19,7 @@ export const PrioritizationSection: React.FC<PrioritizationSectionProps> = ({
     ...(prioritization.moderatePriority || []),
   ];
 
-  // Enforce rule: "Every experiment listed in Experiment Prioritization must also appear in the Proposed Experiments section.
-  // Do not invent additional experiments during prioritization that were not previously proposed."
-  // We align prioritized items to the canonical experiments from Section 9.
+  // Guarantee that every prioritized item strictly references an experiment from Section 9
   const resolvedItems: PrioritizedExperimentItem[] = experiments.map((exp) => {
     const matched = rawProvidedItems.find(
       (item) =>
@@ -34,11 +31,10 @@ export const PrioritizationSection: React.FC<PrioritizationSectionProps> = ({
     if (matched) {
       return {
         ...matched,
-        experimentName: exp.experimentName, // keep canonical name from Section 9
+        experimentName: exp.experimentName,
       };
     }
 
-    // If not explicitly matched in AI prioritization list, derive from proposed experiment
     const impact = exp.impactLevel || 'Medium';
     const effort = exp.effortLevel || 'Medium';
     const isHighImpact = impact.toLowerCase() === 'high';
@@ -60,12 +56,6 @@ export const PrioritizationSection: React.FC<PrioritizationSectionProps> = ({
     };
   });
 
-  // Strict logical categorization:
-  // Quick Wins = High Impact + Low Effort (ONLY)
-  // Strategic Bets = High Impact + High Effort (ONLY)
-  // Fill-ins = Low Impact + Low Effort (ONLY)
-  // Deprioritize = Low Impact + High Effort (ONLY)
-  // Moderate Priority = Medium impact OR Medium effort (explain why)
   const quickWins: PrioritizedExperimentItem[] = [];
   const strategicBets: PrioritizedExperimentItem[] = [];
   const fillIns: PrioritizedExperimentItem[] = [];
@@ -85,7 +75,6 @@ export const PrioritizationSection: React.FC<PrioritizationSectionProps> = ({
     const isMediumEffort = effortNorm === 'medium' || (!isHighEffort && !isLowEffort);
 
     if (isMediumImpact || isMediumEffort) {
-      // Must not be forced into incorrect category!
       moderatePriority.push({
         ...item,
         categoryExplanation:
@@ -109,7 +98,6 @@ export const PrioritizationSection: React.FC<PrioritizationSectionProps> = ({
     }
   });
 
-  // Recommended first experiment normalization
   const firstProposedName = experiments[0]?.experimentName || 'Initial Proposed Test';
   const recommendedFirst = prioritization.recommendedFirst || {
     experimentName:
@@ -125,430 +113,159 @@ export const PrioritizationSection: React.FC<PrioritizationSectionProps> = ({
       'Whether the observed behavioral signal confirms user demand before committing substantial engineering.',
   };
 
-  const getBadgeStyle = (value: string) => {
-    switch (value?.toLowerCase()) {
-      case 'high':
-        return 'text-blue-700 bg-blue-50 border-blue-200';
-      case 'medium':
-        return 'text-amber-700 bg-amber-50 border-amber-200';
-      case 'low':
-        return 'text-gray-700 bg-gray-100 border-gray-200';
-      default:
-        return 'text-gray-700 bg-gray-50 border-gray-200';
-    }
-  };
+  const categories = [
+    {
+      title: 'Quick Wins',
+      formula: 'High Impact + Low Effort',
+      items: quickWins,
+      borderClass: 'border-l-4 border-l-[#C85A32]',
+      tagClass: 'text-[#C85A32] bg-[#FAF8F5]',
+      desc: 'Immediate-return interventions generating rapid validation loops with low engineering overhead.',
+    },
+    {
+      title: 'Strategic Bets',
+      formula: 'High Impact + High Effort',
+      items: strategicBets,
+      borderClass: 'border-l-4 border-l-stone-800',
+      tagClass: 'text-stone-800 bg-stone-100',
+      desc: 'High-upside bets requiring substantive engineering and cross-functional capacity.',
+    },
+    {
+      title: 'Moderate Priority',
+      formula: 'Medium Impact or Medium Effort',
+      items: moderatePriority,
+      borderClass: 'border-l-4 border-l-stone-400',
+      tagClass: 'text-stone-700 bg-stone-100',
+      desc: 'Balanced experiments staged sequentially after rapid validation tests conclude.',
+    },
+    {
+      title: 'Fill-ins',
+      formula: 'Low Impact + Low Effort',
+      items: fillIns,
+      borderClass: 'border-l-4 border-l-stone-300',
+      tagClass: 'text-stone-600 bg-stone-100',
+      desc: 'Incremental adjustments suitable for quick sprints when primary testing bandwidth is constrained.',
+    },
+    {
+      title: 'Deprioritize',
+      formula: 'Low Impact + High Effort',
+      items: deprioritize,
+      borderClass: 'border-l-4 border-l-stone-300',
+      tagClass: 'text-stone-500 bg-stone-100',
+      desc: 'Unfavorable trade-off profile; defer until stronger telemetry justifies high resource spend.',
+    },
+  ];
 
   return (
-    <div className="space-y-6 text-gray-900">
-      {/* Intro Note */}
-      <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-xs text-gray-600 leading-relaxed">
-        <span className="font-semibold text-gray-800">Categorization Logic:</span> Experiments from Section 9 are systematically classified by their Impact and Effort profile. Experiments with Medium impact or Medium effort are placed in Moderate Priority rather than forced into extreme quadrants.
+    <div className="space-y-4">
+      {/* Editorial Note */}
+      <div className="text-xs text-stone-500">
+        Strict text-based prioritization mapping trade-offs across Impact and Effort for all proposed experiments.
       </div>
 
-      {/* 1. Quick Wins */}
-      <div className="border border-gray-200 rounded-xl p-5 bg-white space-y-4">
-        <div className="flex items-start justify-between gap-3 border-b border-gray-100 pb-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <Zap className="w-4 h-4 text-emerald-600 shrink-0" />
-              <h3 className="text-sm font-bold text-gray-900 tracking-tight">
-                1. Quick Wins (High Impact + Low Effort)
-              </h3>
-            </div>
-            <p className="text-xs text-gray-500 mt-0.5">
-              High impact, low effort experiments. Highest immediate leverage.
-            </p>
-          </div>
-          <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
-            High Leverage
-          </span>
-        </div>
-
-        {quickWins.length > 0 ? (
-          <div className="space-y-3.5">
-            {quickWins.map((item, idx) => (
-              <div
-                key={idx}
-                className="bg-gray-50/70 border border-gray-200/90 rounded-lg p-4 text-xs space-y-2"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="font-bold text-gray-900 text-sm">
-                    {item.experimentName}
-                  </div>
-                  <div className="flex items-center gap-1.5 text-[11px]">
-                    <span className="text-gray-500 font-medium">Impact:</span>
-                    <span className={`px-2 py-0.5 rounded font-semibold border ${getBadgeStyle(item.impact)}`}>
-                      {item.impact}
-                    </span>
-                    <span className="text-gray-400">|</span>
-                    <span className="text-gray-500 font-medium">Effort:</span>
-                    <span className={`px-2 py-0.5 rounded font-semibold border ${getBadgeStyle(item.effort)}`}>
-                      {item.effort}
-                    </span>
-                    <span className="text-gray-400">|</span>
-                    <span className="text-gray-500 font-medium">Priority:</span>
-                    <span className={`px-2 py-0.5 rounded font-bold border ${getBadgeStyle(item.priority)}`}>
-                      {item.priority}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="text-gray-700 leading-relaxed">
-                  <span className="font-semibold text-gray-900">Reason: </span>
-                  {item.reason}
-                </div>
-
-                {item.categoryExplanation && (
-                  <div className="text-gray-600 bg-white p-2.5 rounded border border-gray-200/80 leading-relaxed">
-                    <span className="font-semibold text-emerald-800">Why Valuable: </span>
-                    {item.categoryExplanation}
-                  </div>
-                )}
+      {/* 5 Text-Based Categorization Tiers */}
+      <div className="space-y-3">
+        {categories.map((cat) => (
+          <div
+            key={cat.title}
+            className={`bg-white border border-stone-200 rounded-md ${cat.borderClass} p-4 shadow-2xs space-y-2`}
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <h4 className="text-xs font-bold text-stone-900 tracking-tight">
+                  {cat.title}
+                </h4>
+                <span className="text-[11px] font-mono text-stone-400">
+                  ({cat.formula})
+                </span>
               </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-xs text-gray-500 italic">
-            No proposed experiments meet both criteria of High Impact and Low Effort.
-          </p>
-        )}
-      </div>
-
-      {/* 2. Strategic Bets */}
-      <div className="border border-gray-200 rounded-xl p-5 bg-white space-y-4">
-        <div className="flex items-start justify-between gap-3 border-b border-gray-100 pb-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <Target className="w-4 h-4 text-indigo-600 shrink-0" />
-              <h3 className="text-sm font-bold text-gray-900 tracking-tight">
-                2. Strategic Bets (High Impact + High Effort)
-              </h3>
+              <span className={`text-[10px] font-mono font-medium px-2 py-0.5 rounded ${cat.tagClass}`}>
+                {cat.items.length} {cat.items.length === 1 ? 'experiment' : 'experiments'}
+              </span>
             </div>
-            <p className="text-xs text-gray-500 mt-0.5">
-              High impact, high effort experiments. Require planning and dedicated resources.
+
+            <p className="text-[11px] text-stone-500 leading-relaxed">
+              {cat.desc}
             </p>
-          </div>
-          <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-full">
-            Strategic Investment
-          </span>
-        </div>
 
-        {strategicBets.length > 0 ? (
-          <div className="space-y-3.5">
-            {strategicBets.map((item, idx) => (
-              <div
-                key={idx}
-                className="bg-gray-50/70 border border-gray-200/90 rounded-lg p-4 text-xs space-y-2"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="font-bold text-gray-900 text-sm">
-                    {item.experimentName}
-                  </div>
-                  <div className="flex items-center gap-1.5 text-[11px]">
-                    <span className="text-gray-500 font-medium">Impact:</span>
-                    <span className={`px-2 py-0.5 rounded font-semibold border ${getBadgeStyle(item.impact)}`}>
-                      {item.impact}
-                    </span>
-                    <span className="text-gray-400">|</span>
-                    <span className="text-gray-500 font-medium">Effort:</span>
-                    <span className={`px-2 py-0.5 rounded font-semibold border ${getBadgeStyle(item.effort)}`}>
-                      {item.effort}
-                    </span>
-                    <span className="text-gray-400">|</span>
-                    <span className="text-gray-500 font-medium">Priority:</span>
-                    <span className={`px-2 py-0.5 rounded font-bold border ${getBadgeStyle(item.priority)}`}>
-                      {item.priority}
-                    </span>
-                  </div>
-                </div>
+            {cat.items.length === 0 ? (
+              <p className="text-xs text-stone-400 italic py-1">
+                No proposed experiments mapped to this tier.
+              </p>
+            ) : (
+              <div className="space-y-2 pt-1">
+                {cat.items.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="p-3 rounded-md bg-[#FAF8F5] border border-stone-200/80 text-xs space-y-1"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-semibold text-stone-900">
+                        {item.experimentName}
+                      </span>
+                      <div className="flex items-center gap-2 text-[10px] font-mono text-stone-500">
+                        <span>Impact: <strong className="text-stone-800">{item.impact}</strong></span>
+                        <span>·</span>
+                        <span>Effort: <strong className="text-stone-800">{item.effort}</strong></span>
+                        <span>·</span>
+                        <span>Priority: <strong className="text-stone-800">{item.priority}</strong></span>
+                      </div>
+                    </div>
 
-                <div className="text-gray-700 leading-relaxed">
-                  <span className="font-semibold text-gray-900">Reason: </span>
-                  {item.reason}
-                </div>
+                    <p className="text-stone-600 leading-relaxed text-[11px]">
+                      {item.reason}
+                    </p>
 
-                {item.categoryExplanation && (
-                  <div className="text-gray-600 bg-white p-2.5 rounded border border-gray-200/80 leading-relaxed">
-                    <span className="font-semibold text-indigo-800">Why Worth Pursuing: </span>
-                    {item.categoryExplanation}
+                    {item.categoryExplanation && (
+                      <p className="text-[11px] text-stone-400 italic">
+                        {item.categoryExplanation}
+                      </p>
+                    )}
                   </div>
-                )}
+                ))}
               </div>
-            ))}
+            )}
           </div>
-        ) : (
-          <p className="text-xs text-gray-500 italic">
-            No proposed experiments meet both criteria of High Impact and High Effort.
-          </p>
-        )}
+        ))}
       </div>
 
-      {/* 3. Fill-ins */}
-      <div className="border border-gray-200 rounded-xl p-5 bg-white space-y-4">
-        <div className="flex items-start justify-between gap-3 border-b border-gray-100 pb-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-amber-600 shrink-0" />
-              <h3 className="text-sm font-bold text-gray-900 tracking-tight">
-                3. Fill-ins (Low Impact + Low Effort)
-              </h3>
-            </div>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Low impact, low effort experiments. Opportunistic fill-ins.
-            </p>
-          </div>
-          <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full">
-            Opportunistic
-          </span>
-        </div>
-
-        {fillIns.length > 0 ? (
-          <div className="space-y-3.5">
-            {fillIns.map((item, idx) => (
-              <div
-                key={idx}
-                className="bg-gray-50/70 border border-gray-200/90 rounded-lg p-4 text-xs space-y-2"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="font-bold text-gray-900 text-sm">
-                    {item.experimentName}
-                  </div>
-                  <div className="flex items-center gap-1.5 text-[11px]">
-                    <span className="text-gray-500 font-medium">Impact:</span>
-                    <span className={`px-2 py-0.5 rounded font-semibold border ${getBadgeStyle(item.impact)}`}>
-                      {item.impact}
-                    </span>
-                    <span className="text-gray-400">|</span>
-                    <span className="text-gray-500 font-medium">Effort:</span>
-                    <span className={`px-2 py-0.5 rounded font-semibold border ${getBadgeStyle(item.effort)}`}>
-                      {item.effort}
-                    </span>
-                    <span className="text-gray-400">|</span>
-                    <span className="text-gray-500 font-medium">Priority:</span>
-                    <span className={`px-2 py-0.5 rounded font-bold border ${getBadgeStyle(item.priority)}`}>
-                      {item.priority}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="text-gray-700 leading-relaxed">
-                  <span className="font-semibold text-gray-900">Reason: </span>
-                  {item.reason}
-                </div>
-
-                {item.categoryExplanation && (
-                  <div className="text-gray-600 bg-white p-2.5 rounded border border-gray-200/80 leading-relaxed">
-                    <span className="font-semibold text-amber-800">Why Considered Later: </span>
-                    {item.categoryExplanation}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-xs text-gray-500 italic">
-            No proposed experiments meet both criteria of Low Impact and Low Effort.
-          </p>
-        )}
-      </div>
-
-      {/* 4. Deprioritize */}
-      <div className="border border-gray-200 rounded-xl p-5 bg-white space-y-4">
-        <div className="flex items-start justify-between gap-3 border-b border-gray-100 pb-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <ShieldAlert className="w-4 h-4 text-rose-600 shrink-0" />
-              <h3 className="text-sm font-bold text-gray-900 tracking-tight">
-                4. Deprioritize (Low Impact + High Effort)
-              </h3>
-            </div>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Low impact, high effort experiments. Disproportionate effort for negligible return.
-            </p>
-          </div>
-          <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700 bg-rose-50 border border-rose-200 px-2.5 py-0.5 rounded-full">
-            Do Not Prioritize
-          </span>
-        </div>
-
-        {deprioritize.length > 0 ? (
-          <div className="space-y-3.5">
-            {deprioritize.map((item, idx) => (
-              <div
-                key={idx}
-                className="bg-gray-50/70 border border-gray-200/90 rounded-lg p-4 text-xs space-y-2"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="font-bold text-gray-900 text-sm">
-                    {item.experimentName}
-                  </div>
-                  <div className="flex items-center gap-1.5 text-[11px]">
-                    <span className="text-gray-500 font-medium">Impact:</span>
-                    <span className={`px-2 py-0.5 rounded font-semibold border ${getBadgeStyle(item.impact)}`}>
-                      {item.impact}
-                    </span>
-                    <span className="text-gray-400">|</span>
-                    <span className="text-gray-500 font-medium">Effort:</span>
-                    <span className={`px-2 py-0.5 rounded font-semibold border ${getBadgeStyle(item.effort)}`}>
-                      {item.effort}
-                    </span>
-                    <span className="text-gray-400">|</span>
-                    <span className="text-gray-500 font-medium">Priority:</span>
-                    <span className={`px-2 py-0.5 rounded font-bold border ${getBadgeStyle(item.priority)}`}>
-                      {item.priority}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="text-gray-700 leading-relaxed">
-                  <span className="font-semibold text-gray-900">Reason: </span>
-                  {item.reason}
-                </div>
-
-                {item.categoryExplanation && (
-                  <div className="text-gray-600 bg-white p-2.5 rounded border border-gray-200/80 leading-relaxed">
-                    <span className="font-semibold text-rose-800">Why Not Prioritized Now: </span>
-                    {item.categoryExplanation}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-xs text-gray-500 italic">
-            No proposed experiments meet both criteria of Low Impact and High Effort.
-          </p>
-        )}
-      </div>
-
-      {/* 5. Moderate Priority (Medium Impact or Medium Effort) */}
-      <div className="border border-gray-200 rounded-xl p-5 bg-white space-y-4">
-        <div className="flex items-start justify-between gap-3 border-b border-gray-100 pb-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />
-              <h3 className="text-sm font-bold text-gray-900 tracking-tight">
-                5. Moderate Priority (Medium Impact or Medium Effort)
-              </h3>
-            </div>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Experiments with balanced or intermediate trade-offs. Not forced into extreme categories.
-            </p>
-          </div>
-          <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full">
-            Moderate Priority
-          </span>
-        </div>
-
-        {moderatePriority.length > 0 ? (
-          <div className="space-y-3.5">
-            {moderatePriority.map((item, idx) => (
-              <div
-                key={idx}
-                className="bg-gray-50/70 border border-gray-200/90 rounded-lg p-4 text-xs space-y-2"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="font-bold text-gray-900 text-sm">
-                    {item.experimentName}
-                  </div>
-                  <div className="flex items-center gap-1.5 text-[11px]">
-                    <span className="text-gray-500 font-medium">Impact:</span>
-                    <span className={`px-2 py-0.5 rounded font-semibold border ${getBadgeStyle(item.impact)}`}>
-                      {item.impact}
-                    </span>
-                    <span className="text-gray-400">|</span>
-                    <span className="text-gray-500 font-medium">Effort:</span>
-                    <span className={`px-2 py-0.5 rounded font-semibold border ${getBadgeStyle(item.effort)}`}>
-                      {item.effort}
-                    </span>
-                    <span className="text-gray-400">|</span>
-                    <span className="text-gray-500 font-medium">Priority:</span>
-                    <span className={`px-2 py-0.5 rounded font-bold border ${getBadgeStyle(item.priority)}`}>
-                      {item.priority}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="text-gray-700 leading-relaxed">
-                  <span className="font-semibold text-gray-900">Reason: </span>
-                  {item.reason}
-                </div>
-
-                {item.categoryExplanation && (
-                  <div className="text-gray-600 bg-white p-2.5 rounded border border-gray-200/80 leading-relaxed">
-                    <span className="font-semibold text-amber-800">Why Moderate Priority: </span>
-                    {item.categoryExplanation}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-xs text-gray-500 italic">
-            No proposed experiments have Medium impact or Medium effort.
-          </p>
-        )}
-      </div>
-
-      {/* HIGHLIGHTED SECTION: Recommended First Experiment */}
-      <div className="bg-gradient-to-r from-blue-50 via-indigo-50/60 to-purple-50 border-2 border-blue-200 rounded-xl p-6 shadow-xs">
-        <div className="flex items-start gap-3.5 mb-4">
-          <div className="p-2.5 bg-blue-600 text-white rounded-xl shadow-xs shrink-0 mt-0.5">
-            <Award className="w-5 h-5" />
-          </div>
-          <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700 bg-blue-100/90 px-2.5 py-0.5 rounded-full inline-block mb-1">
-              Primary Recommendation
-            </span>
-            <h3 className="text-base font-bold text-gray-900 tracking-tight">
+      {/* Recommended First Experiment Card (Highlighted with Terracotta Accent) */}
+      <div className="bg-stone-900 text-stone-100 rounded-md p-5 border border-stone-800 shadow-xs space-y-3">
+        <div className="flex items-center justify-between gap-2 border-b border-stone-800 pb-2">
+          <div className="flex items-center gap-2">
+            <Zap className="w-4 h-4 text-[#E5855E]" />
+            <span className="text-[11px] font-mono font-semibold uppercase tracking-wider text-[#E5855E]">
               Recommended First Experiment
-            </h3>
+            </span>
+          </div>
+          <div className="flex items-center gap-2 text-[11px] text-stone-400 font-mono">
+            <span>Impact: <strong className="text-stone-200">{recommendedFirst.expectedImpact}</strong></span>
+            <span>·</span>
+            <span>Effort: <strong className="text-stone-200">{recommendedFirst.requiredEffort}</strong></span>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-blue-100 p-5 space-y-3.5 text-xs shadow-xs">
-          <div>
-            <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wide block mb-1">
-              Experiment Name
-            </span>
-            <div className="text-sm font-bold text-blue-950">
-              {recommendedFirst.experimentName}
-            </div>
-          </div>
+        <div>
+          <h4 className="text-sm font-semibold text-white tracking-tight">
+            {recommendedFirst.experimentName}
+          </h4>
+        </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-gray-100">
-            <div>
-              <span className="font-bold text-gray-700 block mb-0.5">
-                Expected Impact:
-              </span>
-              <span className={`inline-block px-2.5 py-0.5 rounded font-semibold border ${getBadgeStyle(recommendedFirst.expectedImpact)}`}>
-                {recommendedFirst.expectedImpact}
-              </span>
-            </div>
-            <div>
-              <span className="font-bold text-gray-700 block mb-0.5">
-                Required Effort:
-              </span>
-              <span className={`inline-block px-2.5 py-0.5 rounded font-semibold border ${getBadgeStyle(recommendedFirst.requiredEffort)}`}>
-                {recommendedFirst.requiredEffort}
-              </span>
-            </div>
-          </div>
-
-          <div className="pt-2 border-t border-gray-100">
-            <span className="font-bold text-gray-900 block mb-1">
-              Why It Should Be Run First:
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 text-xs">
+          <div className="bg-stone-800/80 p-3 rounded-md border border-stone-700/80 space-y-1">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-stone-400 block font-semibold">
+              Why Run First
             </span>
-            <p className="text-gray-700 leading-relaxed">
+            <p className="text-stone-300 leading-relaxed text-[11px]">
               {recommendedFirst.whyRunFirst}
             </p>
           </div>
 
-          <div className="pt-2 border-t border-gray-100">
-            <span className="font-bold text-gray-900 block mb-1">
-              What We Need to Learn From It:
+          <div className="bg-stone-800/80 p-3 rounded-md border border-stone-700/80 space-y-1">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-stone-400 block font-semibold">
+              What We Need to Learn
             </span>
-            <p className="text-gray-700 leading-relaxed">
+            <p className="text-stone-300 leading-relaxed text-[11px]">
               {recommendedFirst.whatWeNeedToLearn}
             </p>
           </div>

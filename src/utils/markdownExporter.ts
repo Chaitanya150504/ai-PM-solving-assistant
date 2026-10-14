@@ -7,7 +7,8 @@ export function generateMarkdownReport(input: ProblemInput, report: AnalysisRepo
     day: 'numeric',
   });
 
-  return `# Product Problem-Solving & Decision Analysis Report
+  return `# Product Diagnosis Studio — Investigation & Decision Report
+*Investigate. Validate. Improve.*
 Generated: ${dateStr}
 
 ---

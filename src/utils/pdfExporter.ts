@@ -24,18 +24,18 @@ export const exportReportToPdf = async (
 
   let currentY = topMargin;
 
-  // Colors
-  const COLOR_PRIMARY = [30, 58, 138]; // Deep Blue
-  const COLOR_SECONDARY = [79, 70, 229]; // Indigo
-  const COLOR_TEXT_DARK = [17, 24, 39]; // Gray 900
-  const COLOR_TEXT_MUTED = [75, 85, 99]; // Gray 600
-  const COLOR_TEXT_LIGHT = [107, 114, 128]; // Gray 500
-  const COLOR_BORDER = [229, 231, 235]; // Gray 200
-  const COLOR_BG_LIGHT = [249, 250, 251]; // Gray 50
+  // Colors: Problem Lab Cobalt Blue & Slate Palette
+  const COLOR_PRIMARY = [37, 99, 235]; // Cobalt Blue #2563EB
+  const COLOR_SECONDARY = [15, 23, 42]; // Slate 900 #0F172A
+  const COLOR_TEXT_DARK = [15, 23, 42]; // Slate 900
+  const COLOR_TEXT_MUTED = [71, 85, 105]; // Slate 600
+  const COLOR_TEXT_LIGHT = [100, 116, 139]; // Slate 500
+  const COLOR_BORDER = [226, 232, 240]; // Slate 200
+  const COLOR_BG_LIGHT = [248, 250, 252]; // Slate 50
   const COLOR_BG_BLUE = [239, 246, 255]; // Blue 50
-  const COLOR_BG_EMERALD = [236, 253, 245]; // Emerald 50
+  const COLOR_BG_EMERALD = [247, 254, 231]; // Lime 50
   const COLOR_BG_AMBER = [255, 251, 235]; // Amber 50
-  const COLOR_SUCCESS = [16, 185, 129];
+  const COLOR_SUCCESS = [101, 163, 13]; // Lime Green
   const COLOR_WARNING = [217, 119, 6];
   const COLOR_DANGER = [225, 29, 72];
 
@@ -405,13 +405,13 @@ export const exportReportToPdf = async (
   // Application Name & Badge
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
-  doc.setTextColor(COLOR_SECONDARY[0], COLOR_SECONDARY[1], COLOR_SECONDARY[2]);
-  doc.text('AI PROBLEM-SOLVING ASSISTANT', leftMargin, currentY + 4);
+  doc.setTextColor(COLOR_PRIMARY[0], COLOR_PRIMARY[1], COLOR_PRIMARY[2]);
+  doc.text('PROBLEM LAB', leftMargin, currentY + 4);
 
-  doc.setFont('helvetica', 'bold');
+  doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.setTextColor(COLOR_TEXT_LIGHT[0], COLOR_TEXT_LIGHT[1], COLOR_TEXT_LIGHT[2]);
-  doc.text('CONFIDENTIAL PRODUCT STRATEGY REPORT', pageWidth - rightMargin - 66, currentY + 4);
+  doc.text('PRODUCT INVESTIGATION WORKSPACE', pageWidth - rightMargin - 66, currentY + 4);
 
   currentY += 10;
 
@@ -846,7 +846,7 @@ export const exportReportToPdf = async (
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(7.5);
       doc.setTextColor(COLOR_TEXT_LIGHT[0], COLOR_TEXT_LIGHT[1], COLOR_TEXT_LIGHT[2]);
-      doc.text('AI Problem-Solving Assistant • Product Management Decision Report', leftMargin, 11);
+      doc.text('Problem Lab • Product Investigation Dossier', leftMargin, 11);
 
       // Subtle rule below header
       doc.setDrawColor(COLOR_BORDER[0], COLOR_BORDER[1], COLOR_BORDER[2]);
