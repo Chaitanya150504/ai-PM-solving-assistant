@@ -39,12 +39,12 @@ export const PRESET_SCENARIOS: PresetScenario[] = [
   },
   {
     id: 'ecommerce-cart-abandonment',
-    badge: 'B2C E-commerce',
+    badge: 'Consumer Services',
     title: 'Shopping Cart Abandonment',
     description: 'Many users add products to their shopping carts but leave without completing their purchases.',
     input: {
       problemStatement: 'Many users add products to their shopping carts but leave without completing their purchases.',
-      productCompany: 'B2C E-commerce',
+      productCompany: 'Consumer Services',
       targetUsers: 'Online Shoppers',
       goal: 'Identify the reasons for cart abandonment and improve checkout conversion.',
       additionalContext:
