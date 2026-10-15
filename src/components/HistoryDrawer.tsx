@@ -20,109 +20,109 @@ export const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-end">
+    <div className="fixed inset-0 z-50 overflow-hidden">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-stone-900/30 backdrop-blur-2xs transition-opacity"
+        className="fixed inset-0 bg-gray-900/40 backdrop-blur-xs transition-opacity"
         onClick={onClose}
       />
 
-      {/* Slide-over Panel */}
-      <div className="relative w-full max-w-md bg-[#FAF8F5] h-full shadow-xl border-l border-stone-200 z-10 flex flex-col animate-in slide-in-from-right duration-200">
-        {/* Header */}
-        <div className="p-4 border-b border-stone-200 flex items-center justify-between bg-white">
-          <div className="flex items-center gap-2">
-            <Clock className="w-4 h-4 text-[#C85A32]" />
-            <h3 className="font-semibold text-xs tracking-tight text-stone-900 uppercase">
-              Analysis History
-            </h3>
-            <span className="text-[11px] font-mono text-stone-500">
-              ({savedList.length})
-            </span>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1 text-stone-400 hover:text-stone-700 rounded-md hover:bg-stone-100 transition-colors cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Content List */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-2.5">
-          {savedList.length === 0 ? (
-            <div className="text-center py-16 px-4 text-stone-400">
-              <FolderOpen className="w-8 h-8 mx-auto mb-2 text-stone-300 stroke-[1.5]" />
-              <p className="text-xs font-semibold text-stone-600">No saved analyses</p>
-              <p className="text-[11px] text-stone-400 mt-0.5 max-w-xs mx-auto">
-                Completed investigations will be saved here automatically.
-              </p>
+      <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
+        <div className="w-screen max-w-md bg-white border-l border-gray-200 shadow-xl flex flex-col">
+          {/* Header */}
+          <div className="p-5 border-b border-gray-200 flex items-center justify-between bg-white">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                <Clock className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900 text-sm">
+                  Analysis History
+                </h3>
+                <p className="text-xs text-gray-500">
+                  {savedList.length} saved {savedList.length === 1 ? 'record' : 'records'}
+                </p>
+              </div>
             </div>
-          ) : (
-            savedList.map((item) => {
-              const dateStr = new Date(item.timestamp).toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric',
-              });
 
-              return (
-                <div
-                  key={item.id}
-                  className="group relative bg-white border border-stone-200 rounded-md p-3.5 hover:border-[#C85A32]/60 hover:shadow-2xs transition-all text-xs cursor-pointer"
-                  onClick={() => {
-                    onSelect(item);
-                    onClose();
-                  }}
-                >
-                  <div className="flex items-center justify-between text-[10px] text-stone-400 mb-1 font-mono">
-                    <span className="font-semibold text-[#C85A32] truncate max-w-[180px]">
-                      {item.input.productCompany || 'Problem Analysis'}
-                    </span>
-                    <span>{dateStr}</span>
+            <button
+              onClick={onClose}
+              className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* List */}
+          <div className="flex-1 overflow-y-auto p-5 space-y-3 bg-gray-50/50">
+            {savedList.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-center p-6 text-gray-400">
+                <FolderOpen className="w-10 h-10 mb-3 text-gray-300 stroke-1" />
+                <p className="text-sm font-medium text-gray-600 mb-1">
+                  No Saved Analyses Yet
+                </p>
+                <p className="text-xs text-gray-400 max-w-xs">
+                  Run a problem diagnosis or load a sample scenario to automatically save your work here.
+                </p>
+              </div>
+            ) : (
+              savedList.map((item) => {
+                const dateStr = new Date(item.timestamp).toLocaleDateString(undefined, {
+                  month: 'short',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                });
+
+                return (
+                  <div
+                    key={item.id}
+                    className="bg-white rounded-lg p-4 border border-gray-200 hover:border-blue-400 transition shadow-xs group"
+                  >
+                    <div className="flex items-center justify-between text-xs text-gray-400 mb-2">
+                      <span className="font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded text-[11px]">
+                        {item.input.productCompany || 'Problem Analysis'}
+                      </span>
+                      <span>{dateStr}</span>
+                    </div>
+
+                    <h4 className="text-sm font-semibold text-gray-900 mb-2 line-clamp-2 leading-snug">
+                      {item.input.problemStatement}
+                    </h4>
+
+                    {item.report?.executiveSummary && (
+                      <p className="text-xs text-gray-500 line-clamp-2 mb-3 leading-relaxed">
+                        {typeof item.report.executiveSummary === 'string'
+                          ? item.report.executiveSummary
+                          : item.report.executiveSummary.problemSummary || item.report.executiveSummary.coreInsight}
+                      </p>
+                    )}
+
+                    <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                      <button
+                        onClick={() => {
+                          onSelect(item);
+                          onClose();
+                        }}
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700 cursor-pointer"
+                      >
+                        <span>Open Report</span>
+                        <ArrowUpRight className="w-3.5 h-3.5" />
+                      </button>
+
+                      <button
+                        onClick={() => onDelete(item.id)}
+                        className="text-gray-400 hover:text-red-600 p-1 rounded hover:bg-red-50 transition cursor-pointer"
+                        title="Delete from history"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
-
-                  <h4 className="font-semibold text-stone-900 line-clamp-2 leading-relaxed group-hover:text-stone-700">
-                    {item.input.problemStatement}
-                  </h4>
-
-                  {item.input.goal && (
-                    <p className="text-[11px] text-stone-500 mt-1 truncate">
-                      Goal: {item.input.goal}
-                    </p>
-                  )}
-
-                  <div className="mt-2.5 pt-2 border-t border-stone-100 flex items-center justify-between text-[11px]">
-                    <span className="text-stone-400 flex items-center gap-1 group-hover:text-[#C85A32] transition-colors">
-                      <span>Open in Workspace</span>
-                      <ArrowUpRight className="w-3 h-3" />
-                    </span>
-
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDelete(item.id);
-                      }}
-                      className="p-1 text-stone-400 hover:text-rose-600 rounded hover:bg-stone-100 transition-colors cursor-pointer"
-                      title="Delete from history"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="p-3.5 border-t border-stone-200 bg-white text-right">
-          <button
-            onClick={onClose}
-            className="px-3 py-1.5 text-xs font-medium text-stone-700 bg-stone-50 border border-stone-200 hover:bg-stone-100 rounded-md transition-colors cursor-pointer"
-          >
-            Close
-          </button>
+                );
+              })
+            )}
+          </div>
         </div>
       </div>
     </div>

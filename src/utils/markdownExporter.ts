@@ -317,6 +317,7 @@ ${report.recommendedActionPlan.steps
 - **Action:** ${s.action}`
   )
   .join('\n\n')}
+${report.recommendedActionPlan.recommendedNextStep ? `\n\n### 🎯 Recommended Next Step\n${report.recommendedActionPlan.recommendedNextStep}` : ''}
 `;
 }
 

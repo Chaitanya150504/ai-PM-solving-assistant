@@ -5,20 +5,18 @@
 
 import React, { useState, useEffect } from 'react';
 import { ProblemInput, AnalysisReport, SavedAnalysis } from './types';
-import { TopNav } from './components/TopNav';
+import { AppHeader } from './components/AppHeader';
 import { ProblemInputForm } from './components/ProblemInputForm';
 import { AnalysisLoading } from './components/AnalysisLoading';
 import { ReportView } from './components/ReportView';
 import { HistoryDrawer } from './components/HistoryDrawer';
-import { HowItWorksModal } from './components/HowItWorksModal';
-import {
-  AlertCircle,
-  RefreshCw,
-  ArrowLeft,
-} from 'lucide-react';
+import { AlertCircle, RefreshCw, ArrowLeft } from 'lucide-react';
 
-const STORAGE_KEY = 'product_diagnosis_studio_history_v1';
-const LEGACY_STORAGE_KEY = 'problem_lab_investigation_history_v1';
+const STORAGE_KEY = 'ai_problem_solving_assistant_history_v1';
+const LEGACY_KEYS = [
+  'product_diagnosis_studio_history_v1',
+  'problem_lab_investigation_history_v1',
+];
 
 export default function App() {
   const [inputData, setInputData] = useState<ProblemInput>({
@@ -34,12 +32,20 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [savedList, setSavedList] = useState<SavedAnalysis[]>([]);
   const [isHistoryOpen, setIsHistoryOpen] = useState<boolean>(false);
-  const [isHelpOpen, setIsHelpOpen] = useState<boolean>(false);
 
-  // Load history from localStorage (with legacy fallback)
+  // Load history from localStorage
   useEffect(() => {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
+      let stored = localStorage.getItem(STORAGE_KEY);
+      if (!stored) {
+        for (const k of LEGACY_KEYS) {
+          const legacy = localStorage.getItem(k);
+          if (legacy) {
+            stored = legacy;
+            break;
+          }
+        }
+      }
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed)) {
@@ -88,6 +94,7 @@ export default function App() {
     setInputData(item.input);
     setReport(item.report);
     setError(null);
+    setIsHistoryOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -160,43 +167,40 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAF8F5] text-stone-900 flex flex-col font-sans antialiased selection:bg-[#C85A32]/20 selection:text-[#C85A32]">
-      {/* Slim Horizontal Top Navigation Bar */}
-      <TopNav
-        onNewAnalysis={handleNewAnalysis}
+    <div className="min-h-screen bg-gray-50 text-gray-900 flex flex-col font-sans antialiased selection:bg-blue-100 selection:text-blue-800">
+      {/* Simple Header */}
+      <AppHeader
         onOpenHistory={() => setIsHistoryOpen(true)}
-        onOpenHowItWorks={() => setIsHelpOpen(true)}
         savedCount={savedList.length}
-        hasReport={!!report}
       />
 
-      {/* Main Workspace Canvas */}
-      <main className="flex-1 w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      {/* Main Content Area */}
+      <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 py-8">
         {/* Error Banner */}
         {error && (
-          <div className="mb-6 max-w-4xl mx-auto bg-rose-50 border border-rose-200 rounded-md p-4 text-xs">
+          <div className="mb-6 max-w-4xl mx-auto bg-rose-50 border border-rose-200 rounded-xl p-4 sm:p-5 text-xs text-rose-800 shadow-xs">
             <div className="flex items-start gap-3">
-              <div className="p-1 bg-rose-100 text-rose-800 rounded shrink-0 mt-0.5">
+              <div className="p-1.5 bg-rose-100 text-rose-700 rounded-lg shrink-0 mt-0.5">
                 <AlertCircle className="w-4 h-4" />
               </div>
               <div className="flex-1">
-                <h4 className="font-semibold text-rose-950 mb-0.5">
-                  Investigation Diagnostic Failed
+                <h4 className="font-bold text-rose-900 mb-0.5">
+                  Analysis Failed
                 </h4>
-                <p className="text-rose-800 leading-relaxed mb-3">
+                <p className="text-rose-700 leading-relaxed mb-3">
                   {error}
                 </p>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleAnalyze(inputData)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 font-semibold text-white bg-[#C85A32] hover:bg-[#B34E29] rounded-md transition-colors cursor-pointer shadow-2xs"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-all cursor-pointer shadow-xs"
                   >
                     <RefreshCw className="w-3.5 h-3.5" />
                     <span>Retry Analysis</span>
                   </button>
                   <button
                     onClick={() => setError(null)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 font-medium text-stone-700 bg-white hover:bg-stone-100 rounded-md transition-colors cursor-pointer border border-stone-200"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 font-medium text-gray-700 bg-white hover:bg-gray-50 rounded-lg transition-all cursor-pointer border border-gray-300"
                   >
                     <ArrowLeft className="w-3.5 h-3.5" />
                     <span>Return to Form</span>
@@ -210,7 +214,7 @@ export default function App() {
         {/* Loading State */}
         {isLoading && <AnalysisLoading />}
 
-        {/* Workspace Input State */}
+        {/* Form State */}
         {!isLoading && !report && (
           <ProblemInputForm
             initialInput={inputData}
@@ -219,7 +223,7 @@ export default function App() {
           />
         )}
 
-        {/* Analysis Results Experience */}
+        {/* Report View State */}
         {!isLoading && report && (
           <ReportView
             input={inputData}
@@ -229,17 +233,15 @@ export default function App() {
         )}
       </main>
 
-      {/* Minimal Footer */}
-      <footer className="border-t border-stone-200 bg-[#FAF8F5] py-4 px-4 sm:px-6 lg:px-8 text-xs text-stone-500">
-        <div className="max-w-[1400px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <span className="font-semibold text-stone-800">Product Diagnosis Studio</span>
-            <span className="text-stone-300">·</span>
-            <span>Product Strategy Workspace</span>
-          </div>
-          <div className="text-stone-400 text-[11px] font-mono">
-            Diagnose → Hypothesize → Investigate → Experiment → Measure → Act
-          </div>
+      {/* Simple Footer */}
+      <footer className="border-t border-gray-200 bg-white py-6 px-4 sm:px-6 text-xs text-gray-500 text-center">
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+          <p className="text-gray-600">
+            <strong>AI Problem-Solving Assistant</strong> · Structured product problem-solving &amp; decision-support tool
+          </p>
+          <p className="text-gray-400 text-[11px]">
+            Designed for Product Managers
+          </p>
         </div>
       </footer>
 
@@ -250,12 +252,6 @@ export default function App() {
         savedList={savedList}
         onSelect={handleSelectHistory}
         onDelete={handleDeleteHistory}
-      />
-
-      {/* How It Works Modal */}
-      <HowItWorksModal
-        isOpen={isHelpOpen}
-        onClose={() => setIsHelpOpen(false)}
       />
     </div>
   );

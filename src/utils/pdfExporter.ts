@@ -24,20 +24,20 @@ export const exportReportToPdf = async (
 
   let currentY = topMargin;
 
-  // Colors: Problem Lab Cobalt Blue & Slate Palette
-  const COLOR_PRIMARY = [37, 99, 235]; // Cobalt Blue #2563EB
-  const COLOR_SECONDARY = [15, 23, 42]; // Slate 900 #0F172A
-  const COLOR_TEXT_DARK = [15, 23, 42]; // Slate 900
-  const COLOR_TEXT_MUTED = [71, 85, 105]; // Slate 600
-  const COLOR_TEXT_LIGHT = [100, 116, 139]; // Slate 500
-  const COLOR_BORDER = [226, 232, 240]; // Slate 200
-  const COLOR_BG_LIGHT = [248, 250, 252]; // Slate 50
-  const COLOR_BG_BLUE = [239, 246, 255]; // Blue 50
-  const COLOR_BG_EMERALD = [247, 254, 231]; // Lime 50
+  // Colors: Deep Charcoal (#151B24) & Emerald Green (#1E8A56 / #70D6A0) Palette
+  const COLOR_PRIMARY = [30, 138, 86]; // Emerald #1E8A56
+  const COLOR_SECONDARY = [21, 27, 36]; // Deep Charcoal #151B24
+  const COLOR_TEXT_DARK = [21, 27, 36]; // Deep Charcoal #151B24
+  const COLOR_TEXT_MUTED = [51, 66, 80]; // Slate Charcoal #334250
+  const COLOR_TEXT_LIGHT = [90, 106, 122]; // Slate 500
+  const COLOR_BORDER = [223, 216, 202]; // Warm Ivory Border #DFD8CA
+  const COLOR_BG_LIGHT = [245, 241, 232]; // Warm Ivory #F5F1E8
+  const COLOR_BG_BLUE = [240, 250, 244]; // Soft Emerald Tint
+  const COLOR_BG_EMERALD = [231, 246, 238]; // Emerald 50
   const COLOR_BG_AMBER = [255, 251, 235]; // Amber 50
-  const COLOR_SUCCESS = [101, 163, 13]; // Lime Green
+  const COLOR_SUCCESS = [30, 138, 86]; // Emerald Green
   const COLOR_WARNING = [217, 119, 6];
-  const COLOR_DANGER = [225, 29, 72];
+  const COLOR_DANGER = [194, 65, 65];
 
   // Helper: check space and add page if needed
   const ensureSpace = (heightNeeded: number) => {
@@ -406,12 +406,12 @@ export const exportReportToPdf = async (
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
   doc.setTextColor(COLOR_PRIMARY[0], COLOR_PRIMARY[1], COLOR_PRIMARY[2]);
-  doc.text('PROBLEM LAB', leftMargin, currentY + 4);
+  doc.text('PRODUCT DIAGNOSIS STUDIO', leftMargin, currentY + 4);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.setTextColor(COLOR_TEXT_LIGHT[0], COLOR_TEXT_LIGHT[1], COLOR_TEXT_LIGHT[2]);
-  doc.text('PRODUCT INVESTIGATION WORKSPACE', pageWidth - rightMargin - 66, currentY + 4);
+  doc.text('PRODUCT MANAGEMENT WORKSPACE', pageWidth - rightMargin - 66, currentY + 4);
 
   currentY += 10;
 
@@ -828,6 +828,15 @@ export const exportReportToPdf = async (
     );
   });
 
+  if (report.recommendedActionPlan.recommendedNextStep) {
+    addCalloutBox(
+      'Recommended Next Step',
+      [{ label: 'Immediate Action', text: report.recommendedActionPlan.recommendedNextStep }],
+      COLOR_BG_BLUE,
+      COLOR_PRIMARY
+    );
+  }
+
   // ==========================================
   // RUNNING HEADERS & FOOTERS ACROSS ALL PAGES
   // ==========================================
@@ -846,7 +855,7 @@ export const exportReportToPdf = async (
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(7.5);
       doc.setTextColor(COLOR_TEXT_LIGHT[0], COLOR_TEXT_LIGHT[1], COLOR_TEXT_LIGHT[2]);
-      doc.text('Problem Lab • Product Investigation Dossier', leftMargin, 11);
+      doc.text('AI Problem-Solving Assistant • Decision-Support Dossier', leftMargin, 11);
 
       // Subtle rule below header
       doc.setDrawColor(COLOR_BORDER[0], COLOR_BORDER[1], COLOR_BORDER[2]);

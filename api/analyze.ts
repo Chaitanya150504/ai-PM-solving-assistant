@@ -197,7 +197,7 @@ You follow this exact structured flow:
     - For target, write: 'Suggested target: Define after establishing the baseline'
     - Do not invent fake percentages or dollar amounts.
 12. Risks & Assumptions (Risks with mitigations, Assumptions labeled as unvalidated, Dependencies, Unknowns)
-13. Recommended Action Plan (Step-by-step sequential action plan with stepNumber, title, owner/focus, timeframe, and concrete action; ends naturally after the final step)
+13. Recommended Action Plan (Step-by-step sequential action plan with stepNumber, title, owner/focus, timeframe, and concrete action; and end with a concrete 'recommendedNextStep' specifying the exact initial milestone to kick off immediately)
 
 You MUST respond strictly with valid JSON.`;
 
@@ -598,8 +598,9 @@ You MUST respond strictly with valid JSON.`;
                 required: ['stepNumber', 'title', 'ownerOrFocus', 'action', 'timeframe'],
               },
             },
+            recommendedNextStep: { type: Type.STRING },
           },
-          required: ['steps'],
+          required: ['steps', 'recommendedNextStep'],
         },
       },
       required: [

@@ -6,17 +6,9 @@ import {
   FileDown,
   Copy,
   Check,
-  Plus,
-  AlertTriangle,
-  ChevronLeft,
-  ChevronRight,
-  ShieldAlert,
-  ArrowRight,
-  CheckCircle2,
-  FileText,
+  ArrowLeft,
+  Sparkles,
 } from 'lucide-react';
-import { generateMarkdownReport, downloadMarkdownFile } from '../utils/markdownExporter';
-import { exportReportToPdf } from '../utils/pdfExporter';
 
 interface ReportViewProps {
   input: ProblemInput;
@@ -24,920 +16,791 @@ interface ReportViewProps {
   onNewInvestigation: () => void;
 }
 
-const SECTIONS_LIST = [
-  { id: 'executive', num: '01', title: 'Executive Summary' },
-  { id: 'definition', num: '02', title: 'Problem Definition' },
-  { id: 'breakdown', num: '03', title: 'Problem Breakdown' },
-  { id: 'rootcauses', num: '04', title: 'Root Cause Analysis' },
-  { id: 'hypotheses', num: '05', title: 'Testable Hypotheses' },
-  { id: 'investigation', num: '06', title: 'Investigation Questions' },
-  { id: 'data', num: '07', title: 'Data & Signals Needed' },
-  { id: 'solutions', num: '08', title: 'Potential Solutions' },
-  { id: 'experiments', num: '09', title: 'Proposed Experiments' },
-  { id: 'prioritization', num: '10', title: 'Experiment Prioritization' },
-  { id: 'metrics', num: '11', title: 'Success Metrics' },
-  { id: 'risks', num: '12', title: 'Risks & Assumptions' },
-  { id: 'actionplan', num: '13', title: 'Recommended Action Plan' },
-];
-
 export const ReportView: React.FC<ReportViewProps> = ({
   input,
   report,
   onNewInvestigation,
 }) => {
-  const [activeSectionIndex, setActiveSectionIndex] = useState(0);
-  const [viewAll, setViewAll] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
-  const [pdfSuccess, setPdfSuccess] = useState(false);
-  const [pdfError, setPdfError] = useState<string | null>(null);
+  const [copied, setCopied] = useState<boolean>(false);
+  const [activeSection, setActiveSection] = useState<string>('all');
 
-  const currentSection = SECTIONS_LIST[activeSectionIndex];
-
-  const handleCopy = async () => {
-    const md = generateMarkdownReport(input, report);
-    try {
-      await navigator.clipboard.writeText(md);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      const textarea = document.createElement('textarea');
-      textarea.value = md;
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textarea);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
+  const handleCopyMarkdown = () => {
+    const md = generateMarkdown(input, report);
+    navigator.clipboard.writeText(md);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
   };
 
-  const handleExportMarkdown = () => {
-    const slug = (input.productCompany || 'investigation')
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-');
-    const md = generateMarkdownReport(input, report);
-    downloadMarkdownFile(md, `${slug}-problem-analysis.md`);
+  const handleDownloadMarkdown = () => {
+    const md = generateMarkdown(input, report);
+    const blob = new Blob([md], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `problem-analysis-${Date.now()}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
-  const handleDownloadPdf = async () => {
-    try {
-      setIsGeneratingPdf(true);
-      setPdfError(null);
-      await exportReportToPdf(report, input);
-      setPdfSuccess(true);
-      setTimeout(() => setPdfSuccess(false), 2500);
-    } catch (err: any) {
-      console.error('PDF export failed:', err);
-      setPdfError('Failed to generate PDF. Please try again.');
-      setTimeout(() => setPdfError(null), 4000);
-    } finally {
-      setIsGeneratingPdf(false);
-    }
+  const handlePrintPDF = () => {
+    window.print();
   };
 
-  const handleNextSection = () => {
-    if (activeSectionIndex < SECTIONS_LIST.length - 1) {
-      setActiveSectionIndex((prev) => prev + 1);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  };
-
-  const handlePrevSection = () => {
-    if (activeSectionIndex > 0) {
-      setActiveSectionIndex((prev) => prev - 1);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  };
-
-  // Section Content Renderers
-  const renderSectionContent = (secId: string) => {
-    switch (secId) {
-      case 'executive':
-        return (
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 text-xs">
-              <div className="bg-[#FAF8F5] p-4 rounded-md border border-stone-200/90 space-y-1.5">
-                <span className="text-[10px] font-mono uppercase tracking-wider text-stone-500 font-semibold block">
-                  Problem Summary
-                </span>
-                <p className="text-stone-800 leading-relaxed">
-                  {report.executiveSummary.problemSummary}
-                </p>
-              </div>
-
-              <div className="bg-[#FAF8F5] p-4 rounded-md border border-[#C85A32]/30 space-y-1.5">
-                <span className="text-[10px] font-mono uppercase tracking-wider text-[#C85A32] font-semibold block">
-                  Recommended Direction
-                </span>
-                <p className="text-stone-900 leading-relaxed font-medium">
-                  {report.executiveSummary.recommendedDirection}
-                </p>
-              </div>
-
-              <div className="bg-[#FAF8F5] p-4 rounded-md border border-stone-200/90 space-y-1.5">
-                <span className="text-[10px] font-mono uppercase tracking-wider text-stone-500 font-semibold block">
-                  Core Strategic Insight
-                </span>
-                <p className="text-stone-800 leading-relaxed">
-                  {report.executiveSummary.coreInsight}
-                </p>
-              </div>
-            </div>
-          </div>
-        );
-
-      case 'definition':
-        return (
-          <div className="space-y-4 text-xs">
-            <div className="space-y-1">
-              <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-stone-500 block">
-                Reframed Problem Statement
-              </span>
-              <p className="text-sm font-semibold text-stone-900 bg-[#FAF8F5] p-4 rounded-md border border-stone-200/90 leading-relaxed">
-                {report.problemDefinition.redefinedProblem}
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="bg-[#FAF8F5] p-4 rounded-md border border-stone-200/90 space-y-2">
-                <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-stone-500 block">
-                  Affected Stakeholder Cohorts
-                </span>
-                <ul className="space-y-1.5 text-stone-700">
-                  {report.problemDefinition.affectedStakeholders.map((s, idx) => (
-                    <li key={idx} className="flex items-start gap-2">
-                      <span className="text-[#C85A32] font-bold">·</span>
-                      <span>{s}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="bg-[#FAF8F5] p-4 rounded-md border border-stone-200/90 space-y-3">
-                <div className="space-y-1">
-                  <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-stone-500 block">
-                    Business Impact & Urgency
-                  </span>
-                  <p className="text-stone-700 leading-relaxed">
-                    {report.problemDefinition.businessImpactAndUrgency}
-                  </p>
-                </div>
-                <div className="space-y-1 pt-1 border-t border-stone-200/60">
-                  <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-stone-500 block">
-                    Why It Matters Now
-                  </span>
-                  <p className="text-stone-700 leading-relaxed">
-                    {report.problemDefinition.whyItMatters}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-
-      case 'breakdown':
-        return (
-          <div className="space-y-3 text-xs">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-              {report.problemBreakdown.dimensions.map((dim, idx) => (
-                <div
-                  key={idx}
-                  className="bg-[#FAF8F5] p-4 rounded-md border border-stone-200/90 space-y-2"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded bg-stone-200 text-stone-800 font-mono text-[10px] font-bold flex items-center justify-center shrink-0">
-                      {idx + 1}
-                    </span>
-                    <h4 className="font-semibold text-stone-900">{dim.dimensionName}</h4>
-                  </div>
-                  <p className="text-stone-600 leading-relaxed text-[11px]">
-                    {dim.description}
-                  </p>
-                  <div className="pt-2 border-t border-stone-200/60">
-                    <span className="text-[10px] font-mono uppercase tracking-wider text-stone-400 block mb-1">
-                      Key Sub-Components
-                    </span>
-                    <ul className="space-y-1 text-stone-700">
-                      {dim.subComponents.map((sub, sIdx) => (
-                        <li key={sIdx} className="flex items-start gap-1.5 text-[11px]">
-                          <span className="text-stone-400">·</span>
-                          <span>{sub}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-
-      case 'rootcauses':
-        return (
-          <div className="space-y-4 text-xs">
-            {/* Cautionary Note Banner */}
-            {report.rootCauseAnalysis.cautionaryNote && (
-              <div className="p-3 bg-[#FAF8F5] border border-amber-300/80 rounded-md text-amber-900 flex items-start gap-2.5">
-                <ShieldAlert className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
-                <span className="leading-relaxed text-[11px]">
-                  <strong>Factual Integrity Note:</strong> {report.rootCauseAnalysis.cautionaryNote}
-                </span>
-              </div>
-            )}
-
-            {/* Three-Way Partition */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3.5">
-              {/* User-Provided Facts */}
-              <div className="bg-[#FAF8F5] p-4 rounded-md border border-stone-200/90 space-y-2">
-                <div className="flex items-center gap-2 pb-1.5 border-b border-stone-200/60">
-                  <span className="w-2 h-2 rounded-full bg-emerald-600" />
-                  <span className="font-semibold text-stone-900 text-[11px] uppercase tracking-wider font-mono">
-                    User-Provided Facts
-                  </span>
-                </div>
-                <p className="text-[11px] text-stone-500">
-                  Confirmed facts directly stated in user input.
-                </p>
-                <ul className="space-y-2 pt-1 text-stone-800">
-                  {report.rootCauseAnalysis.userProvidedFacts.map((fact, idx) => (
-                    <li key={idx} className="flex items-start gap-2 text-[11px] leading-relaxed">
-                      <span className="text-emerald-700 font-bold shrink-0">✓</span>
-                      <span>{fact}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* Possible Root Causes */}
-              <div className="bg-[#FAF8F5] p-4 rounded-md border border-stone-200/90 space-y-2 lg:col-span-2">
-                <div className="flex items-center gap-2 pb-1.5 border-b border-stone-200/60">
-                  <span className="w-2 h-2 rounded-full bg-[#C85A32]" />
-                  <span className="font-semibold text-stone-900 text-[11px] uppercase tracking-wider font-mono">
-                    Possible Root Causes & Unconfirmed Mechanisms
-                  </span>
-                </div>
-                <p className="text-[11px] text-stone-500">
-                  Candidate explanations requiring validation before intervention.
-                </p>
-                <div className="space-y-2.5 pt-1">
-                  {report.rootCauseAnalysis.possibleRootCauses.map((cause, idx) => (
-                    <div
-                      key={idx}
-                      className="p-3 bg-white rounded border border-stone-200/80 space-y-1"
-                    >
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="font-semibold text-stone-900">
-                          {cause.cause}
-                        </span>
-                        <div className="flex items-center gap-2 text-[10px] font-mono text-stone-500">
-                          <span>Category: <strong className="text-stone-700">{cause.category}</strong></span>
-                          <span>·</span>
-                          <span className="text-[#C85A32] font-semibold">{cause.statusLabel}</span>
-                        </div>
-                      </div>
-                      <p className="text-stone-600 leading-relaxed text-[11px]">
-                        <strong>Mechanism:</strong> {cause.mechanism}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Hypotheses Requiring Validation */}
-            <div className="bg-[#FAF8F5] p-4 rounded-md border border-stone-200/90 space-y-2">
-              <span className="font-semibold text-stone-900 text-[11px] uppercase tracking-wider font-mono block">
-                Hypotheses Requiring Validation
-              </span>
-              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-stone-700">
-                {report.rootCauseAnalysis.hypothesesRequiringValidation.map((h, idx) => (
-                  <li key={idx} className="flex items-start gap-2 bg-white p-2.5 rounded border border-stone-200/70 text-[11px]">
-                    <span className="text-[#C85A32] font-bold">·</span>
-                    <span>{h}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        );
-
-      case 'hypotheses':
-        return (
-          <div className="space-y-3 text-xs">
-            <div className="space-y-3">
-              {report.hypotheses.map((item, idx) => (
-                <div
-                  key={item.id || idx}
-                  className="bg-[#FAF8F5] p-4 rounded-md border border-stone-200/90 space-y-2.5"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-stone-200 text-stone-800">
-                        H{idx + 1}
-                      </span>
-                      <h4 className="font-semibold text-stone-900">
-                        {item.hypothesis}
-                      </h4>
-                    </div>
-                    <div className="flex items-center gap-2 text-[10px] font-mono text-stone-500">
-                      <span>Confidence: <strong className="text-stone-800">{item.confidenceLevel}</strong></span>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px] pt-1">
-                    <div className="bg-white p-3 rounded border border-stone-200/70 space-y-1">
-                      <span className="font-mono text-[10px] uppercase tracking-wider text-stone-400 block font-semibold">
-                        Why It Could Be True
-                      </span>
-                      <p className="text-stone-700 leading-relaxed">
-                        {item.whyItCouldBeTrue}
-                      </p>
-                    </div>
-
-                    <div className="bg-white p-3 rounded border border-stone-200/70 space-y-1">
-                      <span className="font-mono text-[10px] uppercase tracking-wider text-stone-400 block font-semibold">
-                        Evidence Needed To Validate
-                      </span>
-                      <p className="text-stone-700 leading-relaxed">
-                        {item.evidenceNeeded}
-                      </p>
-                    </div>
-                  </div>
-
-                  {item.confidenceRationale && (
-                    <p className="text-[11px] text-stone-500 italic">
-                      Rationale: {item.confidenceRationale}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-
-      case 'investigation':
-        return (
-          <div className="space-y-3 text-xs">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {report.investigationQuestions.map((q, idx) => (
-                <div
-                  key={idx}
-                  className="bg-[#FAF8F5] p-4 rounded-md border border-stone-200/90 space-y-1.5"
-                >
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-[#C85A32] font-semibold block">
-                    {q.category}
-                  </span>
-                  <h4 className="font-semibold text-stone-900 text-xs leading-relaxed">
-                    "{q.question}"
-                  </h4>
-                  <p className="text-[11px] text-stone-500 leading-relaxed pt-1 border-t border-stone-200/60">
-                    <strong>Why ask:</strong> {q.whyAskThis}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-
-      case 'data':
-        return (
-          <div className="space-y-3 text-xs">
-            <div className="border border-stone-200/90 rounded-md overflow-hidden bg-white shadow-2xs">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-[#FAF8F5] border-b border-stone-200 text-[10px] font-mono uppercase tracking-wider text-stone-500">
-                    <th className="py-2.5 px-3.5 font-semibold">Source or Metric</th>
-                    <th className="py-2.5 px-3 font-semibold">Category</th>
-                    <th className="py-2.5 px-3.5 font-semibold">What to Look For</th>
-                    <th className="py-2.5 px-3 font-semibold text-right">Priority</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-stone-100 text-[11px]">
-                  {report.dataAndSignalsNeeded.map((sig, idx) => (
-                    <tr key={idx} className="hover:bg-stone-50/60 transition-colors">
-                      <td className="py-2.5 px-3.5 font-semibold text-stone-900">
-                        {sig.sourceOrMetric}
-                      </td>
-                      <td className="py-2.5 px-3 text-stone-500 font-mono text-[10px]">
-                        {sig.category}
-                      </td>
-                      <td className="py-2.5 px-3.5 text-stone-700 leading-relaxed">
-                        {sig.whatToLookFor}
-                      </td>
-                      <td className="py-2.5 px-3 text-right">
-                        <span className="font-mono text-[10px] font-semibold text-stone-700 bg-stone-100 px-2 py-0.5 rounded">
-                          {sig.priority}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        );
-
-      case 'solutions':
-        return (
-          <div className="space-y-3 text-xs">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-              {report.potentialSolutions.map((sol, idx) => (
-                <div
-                  key={sol.id || idx}
-                  className="bg-[#FAF8F5] p-4 rounded-md border border-stone-200/90 space-y-2 flex flex-col justify-between"
-                >
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <h4 className="font-semibold text-stone-900 text-xs">
-                        {sol.solutionName}
-                      </h4>
-                      <div className="flex items-center gap-1.5 text-[10px] font-mono text-stone-500">
-                        <span>Impact: <strong className="text-stone-800">{sol.expectedImpact}</strong></span>
-                        <span>·</span>
-                        <span>Effort: <strong className="text-stone-800">{sol.effort}</strong></span>
-                      </div>
-                    </div>
-                    <p className="text-stone-600 leading-relaxed text-[11px]">
-                      {sol.description}
-                    </p>
-                    <p className="text-[11px] text-stone-500">
-                      <strong>Addresses:</strong> {sol.problemAddressed}
-                    </p>
-                  </div>
-
-                  <div className="pt-2 border-t border-stone-200/60 text-[10px] text-stone-500 space-y-1">
-                    <p>
-                      <strong>Key Assumption:</strong> {sol.keyAssumption}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-
-      case 'experiments':
-        return (
-          <div className="space-y-3 text-xs">
-            <div className="space-y-3">
-              {report.experiments.map((exp, idx) => (
-                <div
-                  key={exp.id || idx}
-                  className="bg-[#FAF8F5] p-4 rounded-md border border-stone-200/90 space-y-2.5"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="w-5 h-5 rounded bg-stone-200 text-stone-800 font-mono text-[10px] font-bold flex items-center justify-center">
-                        {idx + 1}
-                      </span>
-                      <h4 className="font-semibold text-stone-900 text-xs">
-                        {exp.experimentName}
-                      </h4>
-                    </div>
-
-                    <div className="flex items-center gap-2 text-[10px] font-mono text-stone-500">
-                      <span>Impact: <strong className="text-stone-800">{exp.impactLevel}</strong></span>
-                      <span>·</span>
-                      <span>Effort: <strong className="text-stone-800">{exp.effortLevel}</strong></span>
-                      <span>·</span>
-                      <span>Duration: <strong className="text-stone-800">{exp.duration}</strong></span>
-                    </div>
-                  </div>
-
-                  <p className="text-stone-700 leading-relaxed text-[11px]">
-                    <strong>Hypothesis Tested:</strong> {exp.hypothesisTested}
-                  </p>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] bg-white p-3 rounded border border-stone-200/70">
-                    <div>
-                      <span className="text-[10px] font-mono uppercase text-stone-400 block font-semibold">
-                        Design & Target Users
-                      </span>
-                      <p className="text-stone-700 mt-0.5">
-                        {exp.experimentDesign} (Target: {exp.targetUsers})
-                      </p>
-                    </div>
-
-                    <div>
-                      <span className="text-[10px] font-mono uppercase text-stone-400 block font-semibold">
-                        Primary Metric & Decision Rule
-                      </span>
-                      <p className="text-stone-700 mt-0.5">
-                        {exp.primaryMetric} — {exp.decisionRule}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-
-      case 'prioritization':
-        return (
-          <PrioritizationSection
-            prioritization={report.experimentPrioritization}
-            experiments={report.experiments}
-          />
-        );
-
-      case 'metrics':
-        return (
-          <div className="space-y-4 text-xs">
-            {/* Primary Metric Banner */}
-            <div className="bg-[#FAF8F5] p-4 rounded-md border border-stone-200/90 space-y-2">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-[#C85A32] font-semibold block">
-                Primary North Star Metric
-              </span>
-              <h4 className="text-sm font-semibold text-stone-900">
-                {report.successMetrics.primaryMetric.name}
-              </h4>
-              <p className="text-stone-700 leading-relaxed text-[11px]">
-                {report.successMetrics.primaryMetric.definition}
-              </p>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-stone-200/60 font-mono text-[11px]">
-                <div>
-                  <span className="text-stone-400 text-[10px] uppercase block">
-                    Baseline Telemetry
-                  </span>
-                  <span className="text-stone-800 font-semibold">
-                    {report.successMetrics.primaryMetric.baseline}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-stone-400 text-[10px] uppercase block">
-                    Suggested Target
-                  </span>
-                  <span className="text-stone-800 font-semibold">
-                    {report.successMetrics.primaryMetric.targetSuggestion}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Secondary & Guardrail Metrics */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-              <div className="bg-[#FAF8F5] p-4 rounded-md border border-stone-200/90 space-y-2">
-                <span className="text-[10px] font-mono uppercase tracking-wider text-stone-500 font-semibold block">
-                  Secondary Observability Metrics
-                </span>
-                <ul className="space-y-2">
-                  {report.successMetrics.secondaryMetrics.map((sec, idx) => (
-                    <li key={idx} className="bg-white p-2.5 rounded border border-stone-200/70 space-y-0.5">
-                      <span className="font-semibold text-stone-900 block">{sec.name}</span>
-                      <p className="text-stone-500 text-[11px]">{sec.definition}</p>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="bg-[#FAF8F5] p-4 rounded-md border border-stone-200/90 space-y-2">
-                <span className="text-[10px] font-mono uppercase tracking-wider text-stone-500 font-semibold block">
-                  Guardrail Health Metrics
-                </span>
-                <ul className="space-y-2">
-                  {report.successMetrics.guardrailMetrics.map((g, idx) => (
-                    <li key={idx} className="bg-white p-2.5 rounded border border-stone-200/70 space-y-0.5">
-                      <span className="font-semibold text-stone-900 block">{g.name}</span>
-                      <p className="text-rose-700 text-[11px] font-mono">{g.thresholdOrWarning}</p>
-                      <p className="text-stone-500 text-[11px]">{g.whyCrucial}</p>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </div>
-        );
-
-      case 'risks':
-        return (
-          <div className="space-y-4 text-xs">
-            <div className="space-y-2">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-stone-500 font-semibold block">
-                Key Strategic Risks & Mitigations
-              </span>
-              <div className="space-y-2">
-                {report.risksAndAssumptions.risks.map((r, idx) => (
-                  <div
-                    key={idx}
-                    className="p-3 bg-[#FAF8F5] rounded-md border border-stone-200/90 space-y-1 text-xs"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-semibold text-stone-900">{r.risk}</span>
-                      <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-stone-200 text-stone-800">
-                        {r.severity} Severity
-                      </span>
-                    </div>
-                    <p className="text-stone-600 text-[11px] leading-relaxed">
-                      <strong>Mitigation:</strong> {r.mitigation}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2">
-              <div className="bg-[#FAF8F5] p-4 rounded-md border border-stone-200/90 space-y-2">
-                <span className="text-[10px] font-mono uppercase tracking-wider text-stone-500 font-semibold block">
-                  Assumptions Requiring Validation
-                </span>
-                <ul className="space-y-1.5 text-stone-700 text-[11px]">
-                  {report.risksAndAssumptions.assumptions.map((a, idx) => (
-                    <li key={idx} className="flex items-start gap-1.5">
-                      <span className="text-[#C85A32] font-bold">·</span>
-                      <span>
-                        {a.assumption}{' '}
-                        <span className="text-stone-400 font-mono text-[10px]">
-                          ({a.validationStatus})
-                        </span>
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="bg-[#FAF8F5] p-4 rounded-md border border-stone-200/90 space-y-2">
-                <span className="text-[10px] font-mono uppercase tracking-wider text-stone-500 font-semibold block">
-                  Dependencies & Known Unknowns
-                </span>
-                <ul className="space-y-1.5 text-stone-700 text-[11px]">
-                  {report.risksAndAssumptions.dependencies.map((d, idx) => (
-                    <li key={idx} className="flex items-start gap-1.5">
-                      <span className="text-stone-400 font-bold">·</span>
-                      <span>{d}</span>
-                    </li>
-                  ))}
-                  {report.risksAndAssumptions.unknowns.map((u, idx) => (
-                    <li key={`u-${idx}`} className="flex items-start gap-1.5">
-                      <span className="text-stone-400 font-bold">·</span>
-                      <span>Unknown: {u}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </div>
-        );
-
-      case 'actionplan':
-        return (
-          <div className="space-y-3 text-xs">
-            <div className="space-y-2.5">
-              {report.recommendedActionPlan.steps.map((st) => (
-                <div
-                  key={st.stepNumber}
-                  className="p-4 bg-[#FAF8F5] rounded-md border border-stone-200/90 space-y-1.5 text-xs"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="w-5 h-5 rounded bg-stone-900 text-white font-mono text-[10px] font-bold flex items-center justify-center shrink-0">
-                        {st.stepNumber}
-                      </span>
-                      <h4 className="font-semibold text-stone-900">
-                        {st.title}
-                      </h4>
-                    </div>
-                    <div className="flex items-center gap-2 text-[10px] font-mono text-stone-500">
-                      <span>Owner: <strong className="text-stone-800">{st.ownerOrFocus}</strong></span>
-                      <span>·</span>
-                      <span>Timeframe: <strong className="text-stone-800">{st.timeframe}</strong></span>
-                    </div>
-                  </div>
-
-                  <p className="text-stone-700 leading-relaxed text-[11px] pl-7">
-                    {st.action}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-
-      default:
-        return null;
-    }
-  };
+  const sectionsList = [
+    { id: 'sec-definition', num: '01', title: 'Problem Definition' },
+    { id: 'sec-breakdown', num: '02', title: 'Problem Breakdown' },
+    { id: 'sec-rootcauses', num: '03', title: 'Root Causes' },
+    { id: 'sec-hypotheses', num: '04', title: 'Hypotheses' },
+    { id: 'sec-questions', num: '05', title: 'Investigation Questions' },
+    { id: 'sec-datasignals', num: '06', title: 'Data / Signals Needed' },
+    { id: 'sec-solutions', num: '07', title: 'Potential Solutions' },
+    { id: 'sec-experiments', num: '08', title: 'Proposed Experiments' },
+    { id: 'sec-prioritization', num: '09', title: 'Experiment Prioritization' },
+    { id: 'sec-metrics', num: '10', title: 'Success Metrics' },
+    { id: 'sec-risks', num: '11', title: 'Risks & Assumptions' },
+    { id: 'sec-actionplan', num: '12', title: 'Recommended Action Plan' },
+    { id: 'sec-summary', num: '13', title: 'Executive Summary' },
+  ];
 
   return (
-    <div className="max-w-[1300px] mx-auto space-y-6">
-      {/* Top Dossier Header Card & Action Bar */}
-      <div className="bg-white border border-stone-200 rounded-md p-5 sm:p-6 shadow-2xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wider text-stone-400">
-              <span>Investigation Dossier</span>
-              <span>·</span>
-              <span className="text-[#C85A32] font-semibold">13 Sections</span>
-            </div>
-            <h1 className="text-lg sm:text-xl font-semibold text-stone-900 tracking-tight">
-              {input.problemStatement}
-            </h1>
+    <div className="max-w-5xl mx-auto space-y-6">
+      {/* Top Toolbar */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex flex-col sm:flex-row items-center justify-between gap-3 sticky top-16 z-20">
+        <button
+          onClick={onNewInvestigation}
+          className="w-full sm:w-auto inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 border border-gray-300 rounded-lg transition cursor-pointer"
+        >
+          <ArrowLeft className="w-4 h-4 text-gray-500" />
+          <span>New Analysis</span>
+        </button>
 
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-stone-500 pt-1">
-              {input.productCompany && (
-                <span>Product: <strong className="text-stone-800">{input.productCompany}</strong></span>
-              )}
-              {input.targetUsers && (
-                <>
-                  <span className="text-stone-300">·</span>
-                  <span>Cohort: <strong className="text-stone-800">{input.targetUsers}</strong></span>
-                </>
-              )}
-              {input.goal && (
-                <>
-                  <span className="text-stone-300">·</span>
-                  <span>Goal: <strong className="text-stone-800">{input.goal}</strong></span>
-                </>
-              )}
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-end flex-wrap">
+          <button
+            onClick={handleCopyMarkdown}
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 border border-gray-300 rounded-lg transition cursor-pointer"
+          >
+            {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-gray-500" />}
+            <span>{copied ? 'Copied!' : 'Copy Report'}</span>
+          </button>
+
+          <button
+            onClick={handleDownloadMarkdown}
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 border border-gray-300 rounded-lg transition cursor-pointer"
+          >
+            <FileDown className="w-3.5 h-3.5 text-gray-500" />
+            <span>Export Markdown</span>
+          </button>
+
+          <button
+            onClick={handlePrintPDF}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition cursor-pointer shadow-xs"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Download PDF</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Horizontal Numbered Section Navigation */}
+      <div className="bg-white rounded-xl border border-gray-200 p-2.5 overflow-x-auto shadow-xs">
+        <div className="flex items-center gap-1 min-w-max text-xs">
+          <button
+            onClick={() => setActiveSection('all')}
+            className={`px-3 py-1.5 rounded-lg font-medium transition cursor-pointer ${
+              activeSection === 'all'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            All 13 Sections
+          </button>
+          {sectionsList.map((sec) => (
+            <button
+              key={sec.id}
+              onClick={() => {
+                setActiveSection(sec.id);
+                const el = document.getElementById(sec.id);
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }}
+              className={`px-2.5 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 cursor-pointer ${
+                activeSection === sec.id
+                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <span className="font-mono text-[10px] text-gray-400">{sec.num}</span>
+              <span>{sec.title}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Executive Problem Brief */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 sm:p-7">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100 flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+            Executive Problem Brief
+          </span>
+          {input.productCompany && (
+            <span className="text-xs text-gray-500 font-medium">
+              Product: {input.productCompany}
+            </span>
+          )}
+        </div>
+
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3">
+          {report.problemDefinition.redefinedProblem || input.problemStatement}
+        </h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 rounded-lg bg-gray-50 border border-gray-100 mb-4">
+          <div>
+            <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider block mb-1">
+              Core Urgency &amp; Impact
+            </span>
+            <p className="text-xs text-gray-800 leading-relaxed">
+              {report.problemDefinition.businessImpactAndUrgency || 'Critical impediment to core metrics.'}
+            </p>
+          </div>
+          <div>
+            <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider block mb-1">
+              Primary Affected Cohort
+            </span>
+            <p className="text-xs text-gray-800 leading-relaxed">
+              {report.problemDefinition.affectedStakeholders?.join(', ') || input.targetUsers || 'Primary active user segments.'}
+            </p>
+          </div>
+          <div>
+            <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider block mb-1">
+              Desired Outcome
+            </span>
+            <p className="text-xs text-gray-800 leading-relaxed">
+              {input.goal || report.problemDefinition.whyItMatters || 'Systematic metric recovery.'}
+            </p>
+          </div>
+        </div>
+
+        {report.executiveSummary && (
+          <div className="text-sm text-gray-700 leading-relaxed space-y-2">
+            <p><strong>Summary:</strong> {report.executiveSummary.problemSummary}</p>
+            <p><strong>Core Insight:</strong> {report.executiveSummary.coreInsight}</p>
+            <p><strong>Recommended Direction:</strong> {report.executiveSummary.recommendedDirection}</p>
+          </div>
+        )}
+      </div>
+
+      {/* 01. Problem Definition */}
+      <div id="sec-definition" className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 sm:p-7">
+        <div className="flex items-center gap-2.5 mb-4">
+          <span className="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 font-mono text-xs font-bold flex items-center justify-center">
+            01
+          </span>
+          <h3 className="text-lg font-bold text-gray-900">Problem Definition</h3>
+        </div>
+
+        <div className="space-y-4">
+          <div className="p-4 rounded-lg bg-gray-50 border border-gray-200">
+            <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+              Reframed Problem Statement
+            </h4>
+            <p className="text-sm text-gray-900 font-medium leading-relaxed">
+              {report.problemDefinition.redefinedProblem}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-4 rounded-lg border border-gray-200">
+              <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+                Target User &amp; Affected Stakeholders
+              </h4>
+              <p className="text-xs text-gray-700 leading-relaxed">
+                {report.problemDefinition.affectedStakeholders?.join(', ')}
+              </p>
+            </div>
+            <div className="p-4 rounded-lg border border-gray-200">
+              <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+                Why It Matters
+              </h4>
+              <p className="text-xs text-gray-700 leading-relaxed">
+                {report.problemDefinition.whyItMatters}
+              </p>
             </div>
           </div>
 
-          {/* Action Toolbar */}
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
-            <button
-              onClick={handleDownloadPdf}
-              disabled={isGeneratingPdf}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer border ${
-                pdfSuccess
-                  ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                  : 'bg-white text-stone-700 border-stone-200 hover:bg-stone-50 hover:border-stone-300'
-              }`}
-            >
-              <Download className="w-3.5 h-3.5 text-[#C85A32]" />
-              <span>{isGeneratingPdf ? 'Generating...' : pdfSuccess ? 'PDF Ready' : 'Download PDF'}</span>
-            </button>
-
-            <button
-              onClick={handleExportMarkdown}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-stone-700 bg-white border border-stone-200 rounded-md hover:bg-stone-50 hover:border-stone-300 transition-colors cursor-pointer"
-            >
-              <FileDown className="w-3.5 h-3.5 text-stone-400" />
-              <span>Export .MD</span>
-            </button>
-
-            <button
-              onClick={handleCopy}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer border ${
-                copied
-                  ? 'bg-stone-900 text-white border-stone-900'
-                  : 'bg-white text-stone-700 border-stone-200 hover:bg-stone-50 hover:border-stone-300'
-              }`}
-            >
-              {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-stone-400" />}
-              <span>{copied ? 'Copied' : 'Copy'}</span>
-            </button>
-
-            <button
-              onClick={onNewInvestigation}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-[#C85A32] hover:bg-[#B34E29] rounded-md transition-colors cursor-pointer shadow-2xs"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>New Analysis</span>
-            </button>
+          <div className="p-4 rounded-lg border border-gray-200">
+            <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+              Direct Business &amp; Product Impact
+            </h4>
+            <p className="text-xs text-gray-700 leading-relaxed">
+              {report.problemDefinition.businessImpactAndUrgency}
+            </p>
           </div>
         </div>
       </div>
 
-      {pdfError && (
-        <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-md flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
-          <span>{pdfError}</span>
+      {/* 02. Problem Breakdown */}
+      <div id="sec-breakdown" className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 sm:p-7">
+        <div className="flex items-center gap-2.5 mb-4">
+          <span className="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 font-mono text-xs font-bold flex items-center justify-center">
+            02
+          </span>
+          <h3 className="text-lg font-bold text-gray-900">Problem Breakdown</h3>
         </div>
-      )}
 
-      {/* Main Results Workspace: Clean Vertical Numbered Index Rail + Section Content */}
-      <div className="flex flex-col lg:flex-row gap-6 items-start">
-        {/* Clean Vertical Numbered Index (Within Report View Only) */}
-        <aside className="w-full lg:w-64 bg-white border border-stone-200 rounded-md p-2.5 shrink-0 shadow-2xs">
-          <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-stone-100 mb-1.5">
-            <span className="text-[10px] font-mono uppercase text-stone-400 font-bold">
-              13 Report Sections
-            </span>
-            <button
-              onClick={() => setViewAll(!viewAll)}
-              className="text-[11px] font-medium text-[#C85A32] hover:underline cursor-pointer"
-            >
-              {viewAll ? 'Single View' : 'View All'}
-            </button>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {report.problemBreakdown.dimensions.map((item, idx) => (
+            <div key={idx} className="p-4 rounded-lg border border-gray-200 hover:border-blue-300 transition">
+              <h4 className="text-sm font-bold text-gray-900 mb-2">{item.dimensionName}</h4>
+              <p className="text-xs text-gray-600 leading-relaxed mb-3">
+                {item.description}
+              </p>
+              {item.subComponents && item.subComponents.length > 0 && (
+                <div className="pt-2 border-t border-gray-100">
+                  <span className="text-[11px] font-semibold text-gray-700 block mb-1">Sub-components:</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {item.subComponents.map((sub, sIdx) => (
+                      <span key={sIdx} className="text-[11px] bg-gray-100 text-gray-700 px-2 py-0.5 rounded">
+                        {sub}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 03. Root Causes */}
+      <div id="sec-rootcauses" className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 sm:p-7">
+        <div className="flex items-center gap-2.5 mb-4">
+          <span className="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 font-mono text-xs font-bold flex items-center justify-center">
+            03
+          </span>
+          <h3 className="text-lg font-bold text-gray-900">Root Causes</h3>
+        </div>
+
+        <div className="space-y-4">
+          {report.rootCauseAnalysis.userProvidedFacts && report.rootCauseAnalysis.userProvidedFacts.length > 0 && (
+            <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2">
+                Confirmed Facts From Input
+              </h4>
+              <ul className="list-disc list-inside text-xs text-gray-700 space-y-1">
+                {report.rootCauseAnalysis.userProvidedFacts.map((fact, idx) => (
+                  <li key={idx}>{fact}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {report.rootCauseAnalysis.possibleRootCauses.map((rc, idx) => (
+              <div key={idx} className="p-4 rounded-lg border border-gray-200 hover:border-blue-300 transition">
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-blue-50 text-blue-700 text-[11px] font-bold flex items-center justify-center">
+                      {idx + 1}
+                    </span>
+                    <h4 className="text-sm font-bold text-gray-900">{rc.cause}</h4>
+                  </div>
+                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-gray-100 text-gray-700">
+                    {rc.category}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-600 leading-relaxed mb-3 pl-7">
+                  {rc.mechanism}
+                </p>
+                {rc.isAssumption && (
+                  <div className="pl-7">
+                    <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                      Hypothesis / Requires Validation
+                    </span>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
 
-          <nav className="space-y-0.5 max-h-[75vh] overflow-y-auto scrollbar-thin">
-            {SECTIONS_LIST.map((sec, idx) => {
-              const isSelected = !viewAll && activeSectionIndex === idx;
-              return (
-                <button
-                  key={sec.id}
-                  onClick={() => {
-                    setViewAll(false);
-                    setActiveSectionIndex(idx);
-                  }}
-                  className={`w-full text-left px-2.5 py-1.5 rounded-md text-xs transition-colors flex items-center justify-between cursor-pointer ${
-                    isSelected
-                      ? 'bg-stone-900 text-white font-medium shadow-2xs'
-                      : 'text-stone-700 hover:bg-stone-100 hover:text-stone-900'
-                  }`}
-                >
-                  <span className="truncate">
-                    <span className={`font-mono text-[10px] mr-2 ${isSelected ? 'text-[#E5855E]' : 'text-stone-400'}`}>
-                      {sec.num}
-                    </span>
-                    {sec.title}
-                  </span>
-                </button>
-              );
-            })}
-          </nav>
-        </aside>
-
-        {/* Section Content Area */}
-        <div className="flex-1 w-full min-w-0">
-          {viewAll ? (
-            /* View All Sections */
-            <div className="space-y-6">
-              {SECTIONS_LIST.map((sec) => (
-                <div
-                  key={sec.id}
-                  className="bg-white border border-stone-200 rounded-md p-6 shadow-2xs space-y-3"
-                >
-                  <div className="flex items-center gap-2 pb-2 border-b border-stone-100">
-                    <span className="font-mono text-xs font-bold text-[#C85A32]">{sec.num}</span>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-stone-900">
-                      {sec.title}
-                    </h3>
-                  </div>
-                  {renderSectionContent(sec.id)}
-                </div>
-              ))}
+          {report.rootCauseAnalysis.cautionaryNote && (
+            <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-lg text-xs text-amber-900">
+              <strong>Cautionary Note:</strong> {report.rootCauseAnalysis.cautionaryNote}
             </div>
-          ) : (
-            /* Single Section Focus View */
-            <div className="bg-white border border-stone-200 rounded-md p-6 sm:p-7 shadow-2xs flex flex-col justify-between min-h-[500px]">
-              <div>
-                {/* Section Header */}
-                <div className="flex items-center justify-between pb-3 mb-5 border-b border-stone-100">
-                  <div className="flex items-center gap-2.5">
-                    <span className="w-6 h-6 rounded bg-stone-100 text-stone-800 font-mono font-bold text-xs flex items-center justify-center">
-                      {currentSection.num}
-                    </span>
-                    <div>
-                      <span className="text-[10px] font-mono uppercase text-stone-400 block">
-                        Section {activeSectionIndex + 1} of {SECTIONS_LIST.length}
-                      </span>
-                      <h3 className="text-sm font-semibold tracking-tight text-stone-900">
-                        {currentSection.title}
-                      </h3>
-                    </div>
-                  </div>
+          )}
+        </div>
+      </div>
 
-                  <span className="text-[11px] font-mono text-stone-400">
-                    {Math.round(((activeSectionIndex + 1) / SECTIONS_LIST.length) * 100)}% complete
+      {/* 04. Hypotheses */}
+      <div id="sec-hypotheses" className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 sm:p-7">
+        <div className="flex items-center gap-2.5 mb-4">
+          <span className="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 font-mono text-xs font-bold flex items-center justify-center">
+            04
+          </span>
+          <h3 className="text-lg font-bold text-gray-900">Formulated Hypotheses</h3>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {report.hypotheses.map((hyp, idx) => (
+            <div key={idx} className="p-4 rounded-lg border border-gray-200 hover:border-blue-300 transition flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded bg-blue-50 text-blue-700">
+                    {hyp.id || `HYP-0${idx + 1}`}
+                  </span>
+                  <span className="text-[11px] text-gray-500 font-medium">
+                    Confidence: {hyp.confidenceLevel}
                   </span>
                 </div>
+                <h4 className="text-sm font-semibold text-gray-900 mb-2 leading-snug">
+                  {hyp.hypothesis}
+                </h4>
+                <p className="text-xs text-gray-600 leading-relaxed mb-3">
+                  <strong className="text-gray-700">Why It Could Be True:</strong> {hyp.whyItCouldBeTrue}
+                </p>
+              </div>
+              <div className="pt-2 border-t border-gray-100 text-[11px] text-gray-500">
+                <strong className="text-gray-700">Evidence Needed:</strong> {hyp.evidenceNeeded}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
 
-                {/* Section Content */}
-                <div className="py-1">
-                  {renderSectionContent(currentSection.id)}
+      {/* 05. Investigation Questions */}
+      <div id="sec-questions" className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 sm:p-7">
+        <div className="flex items-center gap-2.5 mb-4">
+          <span className="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 font-mono text-xs font-bold flex items-center justify-center">
+            05
+          </span>
+          <h3 className="text-lg font-bold text-gray-900">Investigation Questions</h3>
+        </div>
+
+        <div className="space-y-3">
+          {report.investigationQuestions.map((q, idx) => (
+            <div key={idx} className="p-3.5 rounded-lg border border-gray-200 hover:border-blue-300 transition">
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <span className="text-xs font-bold text-gray-900">
+                  Q{idx + 1}. {q.question}
+                </span>
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-gray-100 text-gray-700 shrink-0">
+                  {q.category}
+                </span>
+              </div>
+              <p className="text-xs text-gray-600 leading-relaxed">
+                <strong className="text-gray-700">Why Ask This:</strong> {q.whyAskThis}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 06. Data / Signals Needed */}
+      <div id="sec-datasignals" className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 sm:p-7">
+        <div className="flex items-center gap-2.5 mb-4">
+          <span className="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 font-mono text-xs font-bold flex items-center justify-center">
+            06
+          </span>
+          <h3 className="text-lg font-bold text-gray-900">Data / Signals Needed</h3>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs text-left">
+            <thead className="bg-gray-50 text-gray-600 uppercase text-[10px] tracking-wider border-b border-gray-200">
+              <tr>
+                <th className="py-2.5 px-3 font-semibold">Category</th>
+                <th className="py-2.5 px-3 font-semibold">Source / Metric</th>
+                <th className="py-2.5 px-3 font-semibold">What To Look For</th>
+                <th className="py-2.5 px-3 font-semibold">Priority</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {report.dataAndSignalsNeeded.map((sig, idx) => (
+                <tr key={idx} className="hover:bg-gray-50 transition">
+                  <td className="py-2.5 px-3 font-semibold text-gray-900">
+                    {sig.category}
+                  </td>
+                  <td className="py-2.5 px-3 text-gray-600">
+                    {sig.sourceOrMetric}
+                  </td>
+                  <td className="py-2.5 px-3 text-gray-600">
+                    {sig.whatToLookFor}
+                  </td>
+                  <td className="py-2.5 px-3">
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-blue-50 text-blue-700">
+                      {sig.priority}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* 07. Potential Solutions */}
+      <div id="sec-solutions" className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 sm:p-7">
+        <div className="flex items-center gap-2.5 mb-4">
+          <span className="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 font-mono text-xs font-bold flex items-center justify-center">
+            07
+          </span>
+          <h3 className="text-lg font-bold text-gray-900">Potential Solutions</h3>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {report.potentialSolutions.map((sol, idx) => (
+            <div key={idx} className="p-4 rounded-lg border border-gray-200 hover:border-blue-300 transition">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-sm font-bold text-gray-900">{sol.solutionName}</h4>
+                <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-blue-50 text-blue-700">
+                  Effort: {sol.effort}
+                </span>
+              </div>
+              <p className="text-xs text-gray-600 leading-relaxed mb-3">
+                {sol.description}
+              </p>
+              <div className="p-2.5 bg-gray-50 rounded border border-gray-100 text-[11px] space-y-1">
+                <div>
+                  <strong className="text-gray-700">Expected Impact:</strong>{' '}
+                  <span className="text-gray-600">{sol.expectedImpact}</span>
+                </div>
+                <div>
+                  <strong className="text-gray-700">Key Assumption:</strong>{' '}
+                  <span className="text-gray-600">{sol.keyAssumption}</span>
                 </div>
               </div>
+            </div>
+          ))}
+        </div>
+      </div>
 
-              {/* Prev / Next Controls */}
-              <div className="mt-8 pt-4 border-t border-stone-100 flex items-center justify-between gap-3 text-xs">
-                <button
-                  onClick={handlePrevSection}
-                  disabled={activeSectionIndex === 0}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border font-medium transition-colors cursor-pointer ${
-                    activeSectionIndex === 0
-                      ? 'text-stone-300 border-stone-100 cursor-not-allowed'
-                      : 'text-stone-700 border-stone-200 hover:bg-stone-50 hover:border-stone-300'
-                  }`}
-                >
-                  <ChevronLeft className="w-3.5 h-3.5" />
-                  <span>Previous: {activeSectionIndex > 0 ? SECTIONS_LIST[activeSectionIndex - 1].title : 'Start'}</span>
-                </button>
+      {/* 08. Proposed Experiments */}
+      <div id="sec-experiments" className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 sm:p-7">
+        <div className="flex items-center gap-2.5 mb-4">
+          <span className="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 font-mono text-xs font-bold flex items-center justify-center">
+            08
+          </span>
+          <h3 className="text-lg font-bold text-gray-900">Proposed Experiments</h3>
+        </div>
 
-                <span className="font-mono text-[11px] text-stone-400">
-                  {activeSectionIndex + 1} / {SECTIONS_LIST.length}
+        <div className="space-y-4">
+          {report.experiments.map((exp, idx) => (
+            <div key={idx} className="p-4 rounded-lg border border-gray-200 hover:border-blue-300 transition">
+              <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                    {exp.id || `EXP-0${idx + 1}`}
+                  </span>
+                  <h4 className="text-sm font-bold text-gray-900">{exp.experimentName}</h4>
+                </div>
+                <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-gray-100 text-gray-700">
+                  Target: {exp.targetUsers}
                 </span>
+              </div>
 
-                <button
-                  onClick={handleNextSection}
-                  disabled={activeSectionIndex === SECTIONS_LIST.length - 1}
-                  className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md font-semibold transition-colors cursor-pointer shadow-2xs ${
-                    activeSectionIndex === SECTIONS_LIST.length - 1
-                      ? 'text-stone-300 bg-stone-100 border border-stone-200 cursor-not-allowed'
-                      : 'text-white bg-[#C85A32] hover:bg-[#B34E29]'
-                  }`}
-                >
-                  <span>Next: {activeSectionIndex < SECTIONS_LIST.length - 1 ? SECTIONS_LIST[activeSectionIndex + 1].title : 'End'}</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
+              <p className="text-xs text-gray-600 leading-relaxed mb-3">
+                {exp.experimentDesign}
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-[11px] bg-gray-50 p-3 rounded-lg border border-gray-100">
+                <div>
+                  <strong className="text-gray-700 block mb-0.5">Hypothesis Tested:</strong>
+                  <span className="text-gray-600">{exp.hypothesisTested}</span>
+                </div>
+                <div>
+                  <strong className="text-gray-700 block mb-0.5">Primary Metric:</strong>
+                  <span className="text-blue-700 font-medium">{exp.primaryMetric}</span>
+                </div>
+                <div>
+                  <strong className="text-gray-700 block mb-0.5">Duration:</strong>
+                  <span className="text-gray-600">{exp.duration}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 09. Experiment Prioritization */}
+      <div id="sec-prioritization" className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 sm:p-7">
+        <div className="flex items-center gap-2.5 mb-4">
+          <span className="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 font-mono text-xs font-bold flex items-center justify-center">
+            09
+          </span>
+          <h3 className="text-lg font-bold text-gray-900">Experiment Prioritization</h3>
+        </div>
+
+        <PrioritizationSection
+          prioritization={report.experimentPrioritization}
+          experiments={report.experiments}
+        />
+      </div>
+
+      {/* 10. Success Metrics */}
+      <div id="sec-metrics" className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 sm:p-7">
+        <div className="flex items-center gap-2.5 mb-4">
+          <span className="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 font-mono text-xs font-bold flex items-center justify-center">
+            10
+          </span>
+          <h3 className="text-lg font-bold text-gray-900">Success Metrics</h3>
+        </div>
+
+        <div className="space-y-4">
+          {report.successMetrics.primaryMetric && (
+            <div className="p-4 rounded-lg bg-blue-50/40 border border-blue-200">
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-blue-600 text-white inline-block mb-2">
+                Primary North Star Metric
+              </span>
+              <h4 className="text-sm font-bold text-gray-900 mb-1">
+                {report.successMetrics.primaryMetric.name}
+              </h4>
+              <p className="text-xs text-gray-600 mb-2">
+                {report.successMetrics.primaryMetric.definition}
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] pt-2 border-t border-blue-100">
+                <div>
+                  <strong className="text-gray-700">Target:</strong> {report.successMetrics.primaryMetric.targetSuggestion}
+                </div>
+                <div>
+                  <strong className="text-gray-700">Why Chosen:</strong> {report.successMetrics.primaryMetric.whyChosen}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {report.successMetrics.secondaryMetrics?.map((met, idx) => (
+              <div key={idx} className="p-4 rounded-lg border border-gray-200 hover:border-blue-300 transition">
+                <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-gray-100 text-gray-700 inline-block mb-1.5">
+                  Secondary Metric
+                </span>
+                <h4 className="text-sm font-bold text-gray-900 mb-1">{met.name}</h4>
+                <p className="text-xs text-gray-600 mb-2">{met.definition}</p>
+                <div className="text-[11px] text-gray-500 pt-1.5 border-t border-gray-100">
+                  <strong className="text-gray-700">Relevance:</strong> {met.relevance}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {report.successMetrics.guardrailMetrics && report.successMetrics.guardrailMetrics.length > 0 && (
+            <div className="p-4 rounded-lg border border-amber-200 bg-amber-50/30">
+              <h4 className="text-xs font-bold text-amber-900 uppercase tracking-wider mb-2">
+                Guardrail Metrics
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {report.successMetrics.guardrailMetrics.map((g, idx) => (
+                  <div key={idx} className="bg-white p-3 rounded border border-amber-200 text-xs">
+                    <strong className="text-gray-900 block mb-0.5">{g.name}</strong>
+                    <p className="text-gray-600 mb-1">{g.definition}</p>
+                    <div className="text-[11px] text-amber-800">
+                      <strong>Threshold / Warning:</strong> {g.thresholdOrWarning}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
         </div>
       </div>
+
+      {/* 11. Risks & Assumptions */}
+      <div id="sec-risks" className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 sm:p-7">
+        <div className="flex items-center gap-2.5 mb-4">
+          <span className="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 font-mono text-xs font-bold flex items-center justify-center">
+            11
+          </span>
+          <h3 className="text-lg font-bold text-gray-900">Risks &amp; Assumptions</h3>
+        </div>
+
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {report.risksAndAssumptions.risks?.map((r, idx) => (
+              <div key={idx} className="p-4 rounded-lg border border-rose-200 bg-rose-50/20">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-rose-100 text-rose-800">
+                    Risk · Severity: {r.severity}
+                  </span>
+                </div>
+                <h4 className="text-sm font-bold text-gray-900 mb-1">{r.risk}</h4>
+                <div className="text-xs text-gray-600 pt-1.5 border-t border-rose-100">
+                  <strong className="text-gray-700">Mitigation:</strong> {r.mitigation}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {report.risksAndAssumptions.assumptions && report.risksAndAssumptions.assumptions.length > 0 && (
+            <div className="p-4 rounded-lg border border-gray-200 bg-gray-50/50">
+              <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
+                Key Assumptions
+              </h4>
+              <div className="space-y-2">
+                {report.risksAndAssumptions.assumptions.map((a, idx) => (
+                  <div key={idx} className="text-xs text-gray-700 flex items-start justify-between gap-2">
+                    <span>• {a.assumption}</span>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-gray-100 text-gray-600 shrink-0">
+                      {a.validationStatus}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 12. Recommended Action Plan */}
+      <div id="sec-actionplan" className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 sm:p-7">
+        <div className="flex items-center gap-2.5 mb-4">
+          <span className="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 font-mono text-xs font-bold flex items-center justify-center">
+            12
+          </span>
+          <h3 className="text-lg font-bold text-gray-900">Recommended Action Plan</h3>
+        </div>
+
+        <div className="space-y-3">
+          {report.recommendedActionPlan.steps?.map((step, idx) => (
+            <div key={idx} className="p-4 rounded-lg border border-gray-200 hover:border-blue-300 transition flex items-start gap-3">
+              <span className="w-6 h-6 rounded-full bg-blue-600 text-white font-mono text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
+                {step.stepNumber || idx + 1}
+              </span>
+              <div className="flex-1">
+                <div className="flex items-center justify-between gap-2 mb-1 flex-wrap">
+                  <h4 className="text-sm font-bold text-gray-900">{step.title || step.action}</h4>
+                  <span className="text-[11px] font-mono text-blue-700 bg-blue-50 px-2 py-0.5 rounded">
+                    {step.timeframe}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-600 leading-relaxed mb-2">
+                  {step.action}
+                </p>
+                <div className="text-[11px] text-gray-500">
+                  <strong className="text-gray-700">Owner/Focus:</strong> {step.ownerOrFocus}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 13. Executive Summary / Conclusion */}
+      <div id="sec-summary" className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 sm:p-7">
+        <div className="flex items-center gap-2.5 mb-4">
+          <span className="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 font-mono text-xs font-bold flex items-center justify-center">
+            13
+          </span>
+          <h3 className="text-lg font-bold text-gray-900">Executive Summary &amp; Synthesis</h3>
+        </div>
+
+        <div className="p-5 rounded-lg bg-blue-50/50 border border-blue-100 text-gray-800 text-sm leading-relaxed space-y-3">
+          <p><strong>Core Insight:</strong> {report.executiveSummary.coreInsight}</p>
+          <p><strong>Recommended Strategic Direction:</strong> {report.executiveSummary.recommendedDirection}</p>
+          <div className="pt-3 border-t border-blue-200/60 flex items-center justify-between text-xs text-blue-800">
+            <span>Generated via AI Problem-Solving Assistant</span>
+            <span className="font-semibold">All 13 Diagnostic Sections Complete</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
+
+function generateMarkdown(input: ProblemInput, report: AnalysisReport): string {
+  return `# AI Problem-Solving Assistant: Diagnostic Report
+Generated: ${new Date().toLocaleDateString()}
+Product/Company: ${input.productCompany || 'N/A'}
+Target Users: ${input.targetUsers || 'N/A'}
+Goal: ${input.goal || 'N/A'}
+
+## Executive Summary
+${report.executiveSummary.problemSummary}
+- **Core Insight:** ${report.executiveSummary.coreInsight}
+- **Recommended Direction:** ${report.executiveSummary.recommendedDirection}
+
+---
+
+## 01. Problem Definition
+- **Formal Statement:** ${report.problemDefinition.redefinedProblem}
+- **Affected Users:** ${report.problemDefinition.affectedStakeholders?.join(', ')}
+- **Core Urgency:** ${report.problemDefinition.businessImpactAndUrgency}
+- **Why It Matters:** ${report.problemDefinition.whyItMatters}
+
+## 02. Problem Breakdown
+${report.problemBreakdown.dimensions
+  .map(
+    (b) =>
+      `### ${b.dimensionName}\n${b.description}\n- Subcomponents: ${b.subComponents?.join(', ')}`
+  )
+  .join('\n\n')}
+
+## 03. Root Causes
+${report.rootCauseAnalysis.possibleRootCauses
+  .map(
+    (rc, i) =>
+      `### ${i + 1}. ${rc.cause} [${rc.category}]\n- Mechanism: ${rc.mechanism}\n- Is Assumption: ${rc.isAssumption}`
+  )
+  .join('\n\n')}
+
+## 04. Formulated Hypotheses
+${report.hypotheses
+  .map(
+    (h, i) =>
+      `### ${h.id || `HYP-${i + 1}`}: ${h.hypothesis}\n- Confidence: ${h.confidenceLevel}\n- Why It Could Be True: ${h.whyItCouldBeTrue}\n- Evidence Needed: ${h.evidenceNeeded}`
+  )
+  .join('\n\n')}
+
+## 05. Investigation Questions
+${report.investigationQuestions
+  .map(
+    (q, i) =>
+      `${i + 1}. **${q.question}** [${q.category}]\n   - Why Ask This: ${q.whyAskThis}`
+  )
+  .join('\n\n')}
+
+## 06. Data / Signals Needed
+${report.dataAndSignalsNeeded
+  .map(
+    (s) =>
+      `- **${s.sourceOrMetric}** [${s.category}]: ${s.whatToLookFor} (Priority: ${s.priority})`
+  )
+  .join('\n')}
+
+## 07. Potential Solutions
+${report.potentialSolutions
+  .map(
+    (s) =>
+      `### ${s.solutionName} (Effort: ${s.effort})\n${s.description}\n- Expected Impact: ${s.expectedImpact}\n- Key Assumption: ${s.keyAssumption}`
+  )
+  .join('\n\n')}
+
+## 08. Proposed Experiments
+${report.experiments
+  .map(
+    (e) =>
+      `### ${e.id}: ${e.experimentName}\n${e.experimentDesign}\n- Target Users: ${e.targetUsers}\n- Primary Metric: ${e.primaryMetric}\n- Duration: ${e.duration}`
+  )
+  .join('\n\n')}
+
+## 09. Experiment Prioritization
+- **Quick Wins:** ${report.experimentPrioritization.quickWins?.map((x) => `[${x.experimentName}] (${x.reason || ''})`).join('; ') || 'None'}
+- **Strategic Bets:** ${report.experimentPrioritization.strategicBets?.map((x) => `[${x.experimentName}] (${x.reason || ''})`).join('; ') || 'None'}
+- **Fill-ins:** ${report.experimentPrioritization.fillIns?.map((x) => `[${x.experimentName}] (${x.reason || ''})`).join('; ') || 'None'}
+- **Reconsider:** ${report.experimentPrioritization.deprioritize?.map((x) => `[${x.experimentName}] (${x.reason || ''})`).join('; ') || 'None'}
+
+## 10. Success Metrics
+- **Primary Metric:** ${report.successMetrics.primaryMetric.name} - Target: ${report.successMetrics.primaryMetric.targetSuggestion}
+${report.successMetrics.secondaryMetrics?.map((m) => `- Secondary: ${m.name} (${m.relevance})`).join('\n')}
+
+## 11. Risks & Assumptions
+${report.risksAndAssumptions.risks?.map((r) => `- [Risk - ${r.severity}] ${r.risk} (Mitigation: ${r.mitigation})`).join('\n')}
+${report.risksAndAssumptions.assumptions?.map((a) => `- [Assumption] ${a.assumption} (${a.validationStatus})`).join('\n')}
+
+## 12. Recommended Action Plan
+${report.recommendedActionPlan.steps?.map((a) => `${a.stepNumber}. **${a.title || a.action}** [${a.timeframe}] - Owner: ${a.ownerOrFocus}\n   ${a.action}`).join('\n\n')}
+
+## 13. Synthesis
+${report.executiveSummary.coreInsight}
+`;
+}

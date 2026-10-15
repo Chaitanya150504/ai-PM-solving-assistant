@@ -1,91 +1,66 @@
 import React, { useEffect, useState } from 'react';
-import { Loader2, CheckCircle2, Layers } from 'lucide-react';
+import { Loader2, Sparkles, CheckCircle2 } from 'lucide-react';
 
 const STAGES = [
-  { label: 'Framing Problem & Core Urgency', desc: 'Rewriting problem statement, isolating affected cohorts, and assessing business criticality.' },
-  { label: 'Deconstructing Symptoms & Root Causes', desc: 'Isolating observed ground-truth facts from potential unconfirmed mechanisms.' },
-  { label: 'Formulating Testable Hypotheses', desc: 'Establishing evidence requirements, investigation questions, and confidence rationale.' },
-  { label: 'Structuring & Prioritizing Interventions', desc: 'Classifying proposed experiments into logical impact/effort tiers without 2x2 matrix.' },
-  { label: 'Synthesizing Metrics & Action Roadmap', desc: 'Establishing North Star baseline rules, guardrail thresholds, and execution steps.' },
+  'Framing problem definition and core urgency...',
+  'Deconstructing problem dimensions and affected cohorts...',
+  'Identifying root causes and contributing factors...',
+  'Formulating testable hypotheses and assumptions...',
+  'Synthesizing investigation questions and data signals...',
+  'Developing potential solutions and proposed experiments...',
+  'Prioritizing experiments and structuring action plan...',
 ];
 
 export const AnalysisLoading: React.FC = () => {
-  const [currentStage, setCurrentStage] = useState(0);
+  const [stageIndex, setStageIndex] = useState(0);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentStage((prev) => (prev < STAGES.length - 1 ? prev + 1 : prev));
+      setStageIndex((prev) => (prev < STAGES.length - 1 ? prev + 1 : prev));
     }, 2400);
     return () => clearInterval(interval);
   }, []);
 
   return (
-    <div className="max-w-xl mx-auto my-12 bg-white rounded-md border border-stone-200 p-8 shadow-2xs text-center space-y-5">
-      <div className="w-10 h-10 mx-auto rounded-md bg-[#FAF8F5] border border-stone-200 flex items-center justify-center text-[#C85A32]">
-        <Layers className="w-5 h-5 animate-pulse" />
-      </div>
-
-      <div className="space-y-1">
-        <h3 className="text-base font-semibold text-stone-900 tracking-tight">
+    <div className="max-w-2xl mx-auto py-12 px-4">
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-8 text-center">
+        <div className="w-16 h-16 mx-auto mb-5 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
+          <Loader2 className="w-8 h-8 animate-spin" />
+        </div>
+        <h3 className="text-xl font-bold text-gray-900 mb-2">
           Analyzing Product Problem
         </h3>
-        <p className="text-xs text-stone-500 max-w-sm mx-auto leading-relaxed">
-          Executing evidence-based investigation across root causes, hypotheses, prioritized experiments, and action milestones.
+        <p className="text-sm text-gray-500 mb-6">
+          Our AI model is synthesizing root causes, formulating hypotheses, and structuring validation experiments.
         </p>
-      </div>
 
-      {/* Progress Stages */}
-      <div className="space-y-2 text-left max-w-md mx-auto bg-[#FAF8F5] p-4 rounded-md border border-stone-200/80">
-        {STAGES.map((stage, idx) => {
-          const isDone = idx < currentStage;
-          const isCurrent = idx === currentStage;
-
-          return (
-            <div
-              key={stage.label}
-              className={`flex items-start gap-2.5 p-2 rounded-md transition-colors ${
-                isCurrent ? 'bg-white border border-stone-200 shadow-2xs' : ''
-              }`}
-            >
-              <div className="mt-0.5 shrink-0">
+        <div className="bg-gray-50 rounded-lg p-4 border border-gray-100 text-left space-y-2.5 max-w-md mx-auto">
+          {STAGES.map((stage, idx) => {
+            const isDone = idx < stageIndex;
+            const isCurrent = idx === stageIndex;
+            return (
+              <div
+                key={stage}
+                className={`flex items-center gap-2.5 text-xs transition-opacity ${
+                  isCurrent
+                    ? 'text-blue-600 font-semibold'
+                    : isDone
+                      ? 'text-gray-400'
+                      : 'text-gray-300'
+                }`}
+              >
                 {isDone ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
                 ) : isCurrent ? (
-                  <Loader2 className="w-4 h-4 text-[#C85A32] animate-spin" />
+                  <Loader2 className="w-4 h-4 text-blue-600 animate-spin shrink-0" />
                 ) : (
-                  <div className="w-4 h-4 rounded border border-stone-300 bg-white" />
+                  <div className="w-4 h-4 rounded-full border border-gray-300 shrink-0" />
                 )}
+                <span>{stage}</span>
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <span
-                    className={`text-xs ${
-                      isDone
-                        ? 'text-stone-700 font-medium'
-                        : isCurrent
-                        ? 'text-stone-900 font-semibold'
-                        : 'text-stone-400'
-                    }`}
-                  >
-                    {stage.label}
-                  </span>
-                  {isCurrent && (
-                    <span className="text-[10px] font-mono text-[#C85A32] bg-[#C85A32]/10 px-1.5 py-0.2 rounded font-semibold">
-                      In progress
-                    </span>
-                  )}
-                </div>
-                <p className="text-[11px] text-stone-500 truncate mt-0.5">
-                  {stage.desc}
-                </p>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="text-[11px] font-mono text-stone-400">
-        Estimated analysis time: 8–15 seconds for complete 13-stage dossier
+            );
+          })}
+        </div>
       </div>
     </div>
   );
